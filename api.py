@@ -12,7 +12,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
 from langchain_mistralai import ChatMistralAI
 from langchain_together import Together
-from browser_use import Agent
+from browser_use import Agent, Browser, BrowserConfig
 from dotenv import load_dotenv
 import logging
 
@@ -72,9 +72,17 @@ async def run_agent(request: AgentRequest):
         
         llm = get_llm(request.provider, request.model)
         
+        config = BrowserConfig(
+            headless=True,
+        )
+
+        browser = Browser(
+            config=config,
+        )
         agent = Agent(
             task=request.task,
             llm=llm,
+            browser=browser,
         )
         
         agent_results = await agent.run()

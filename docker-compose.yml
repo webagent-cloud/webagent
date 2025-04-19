@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  webagent:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      # Add your API keys here (or use a .env file)
+      # - OPENAI_API_KEY=your_openai_api_key
+      # - ANTHROPIC_API_KEY=your_anthropic_api_key
+      # - GOOGLE_API_KEY=your_google_api_key
+      # - GROQ_API_KEY=your_groq_api_key
+      # - MISTRAL_API_KEY=your_mistral_api_key
+      # - TOGETHER_API_KEY=your_together_api_key
+      # - DEEPSEEK_API_KEY=your_deepseek_api_key

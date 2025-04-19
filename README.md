@@ -8,6 +8,8 @@ A very simple web agent server using excellent [Browser-use tool](https://github
 
 ## Installation
 
+### Option 1: Local Installation
+
 1. Make sure you have Python 3.12+ installed.
 2. Install the dependencies:
 
@@ -29,10 +31,50 @@ GROK_API_KEY=
 NOVITA_API_KEY=
 ```
 
+### Option 2: Docker Installation
+
+#### Using Docker
+
+1. Build the Docker image:
+
+```bash
+docker build -t webagent .
+```
+
+2. Run the container:
+
+```bash
+docker run -p 8000:8000 --env-file .env webagent
+```
+
+The Docker image includes all necessary dependencies, including Playwright for browser automation.
+
+#### Using Docker Compose
+
+1. Configure your environment variables in the `docker-compose.yml` file or in a `.env` file.
+
+2. Start the service:
+
+```bash
+docker-compose up
+```
+
 ## Starting the server
+
+### Local Start
 
 ```bash
 python server.py
+```
+
+### Docker Start
+
+```bash
+# Using Docker
+docker run -p 8000:8000 --env-file .env webagent
+
+# Using Docker Compose
+docker-compose up
 ```
 
 The server will start at http://localhost:8000
