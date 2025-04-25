@@ -4,7 +4,7 @@ services:
   webagent:
     build: .
     ports:
-      - "8000:8000"
+      - "8080:8080"
     environment:
       - PYTHONUNBUFFERED=1
       # Add your API keys here (or use a .env file)

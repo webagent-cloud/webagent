@@ -44,7 +44,7 @@ docker build -t webagent .
 2. Run the container:
 
 ```bash
-docker run -p 8000:8000 --env-file .env webagent
+docker run -p 8080:8080 --env-file .env webagent
 ```
 
 The Docker image includes all necessary dependencies, including Playwright for browser automation.
@@ -71,20 +71,20 @@ python server.py
 
 ```bash
 # Using Docker
-docker run -p 8000:8000 --env-file .env webagent
+docker run -p 8080:8080 --env-file .env webagent
 
 # Using Docker Compose
 docker-compose up
 ```
 
-The server will start at http://localhost:8000
+The server will start at http://localhost:8080
 
 ## API Documentation
 
 Once the server is started, you can access the interactive API documentation at:
 
-- http://localhost:8000/docs (Swagger UI)
-- http://localhost:8000/redoc (ReDoc)
+- http://localhost:8080/docs (Swagger UI)
+- http://localhost:8080/redoc (ReDoc)
 
 ## Using the API
 
@@ -128,7 +128,7 @@ Once the server is started, you can access the interactive API documentation at:
 ```bash
 # Execute a task
 curl -X 'POST' \
-  'http://localhost:8000/run' \
+  'http://localhost:8080/run' \
   -H 'Content-Type: application/json' \
   -d '{
   "task": "go to this site https://example.com and retrieve the page title",
@@ -143,7 +143,7 @@ curl -X 'POST' \
 import requests
 
 # Base URL of the API
-base_url = "http://localhost:8000"
+base_url = "http://localhost:8080"
 
 # Execute a task
 response = requests.post(
