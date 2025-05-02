@@ -5,6 +5,7 @@
 A very simple web agent server using excellent [Browser-use tool](https://github.com/browser-use/browser-use).
 - 🌐 Multiple LLM compatibility
 - 🔒 Hosted on your infrastructure
+- 💽 Store and retrieve results in your database
 
 ## Installation
 

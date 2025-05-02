@@ -1,0 +1,235 @@
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, ForeignKey, Text
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, relationship
+from typing import Optional, List, Dict, Any
+import json
+from models import ProviderEnum
+
+engine = create_engine('sqlite:///tasks.db', echo=True)
+Base = declarative_base()
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    prompt = Column(Text, nullable=False)
+    model = Column(String, nullable=False)
+    provider = Column(String, nullable=False)
+    runs = relationship("TaskRun", back_populates="task", cascade="all, delete-orphan")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "prompt": self.prompt,
+            "model": self.model,
+            "provider": self.provider
+        }
+
+
+class TaskRun(Base):
+    __tablename__ = "task_runs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    prompt = Column(Text, nullable=False)
+    model = Column(String, nullable=False)
+    provider = Column(String, nullable=False)
+    result = Column(Text, nullable=True)
+    is_done = Column(Boolean, default=False)
+    is_successful = Column(Boolean, nullable=True)
+    task = relationship("Task", back_populates="runs")
+    steps = relationship("RunStep", back_populates="task_run", cascade="all, delete-orphan")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "task_id": self.task_id,
+            "prompt": self.prompt,
+            "model": self.model,
+            "provider": self.provider,
+            "result": self.result,
+            "is_done": self.is_done,
+            "is_successful": self.is_successful,
+            "steps": [step.to_dict() for step in self.steps]
+        }
+
+
+class RunStep(Base):
+    __tablename__ = "run_steps"
+
+    task_run_id = Column(Integer, ForeignKey("task_runs.id"), primary_key=True)
+    step_number = Column(Integer, primary_key=True)
+    result = Column(Text, nullable=True)
+    errors = Column(Text, nullable=True)
+    is_done = Column(Boolean, default=False)
+    is_successful = Column(Boolean, nullable=True)
+    screenshot = Column(Text, nullable=True)
+    task_run = relationship("TaskRun", back_populates="steps")
+
+    def to_dict(self):
+        return {
+            "task_run_id": self.task_run_id,
+            "step_number": self.step_number,
+            "result": self.result,
+            "errors": self.errors,
+            "is_done": self.is_done,
+            "is_successful": self.is_successful,
+            "screenshot": self.screenshot
+        }
+
+Base.metadata.create_all(bind=engine)
+
+def create_task(prompt: str, model: str, provider: str) -> Task:
+    """Create a new task in the database"""
+    db = SessionLocal()
+    try:
+        task = Task(prompt=prompt, model=model, provider=provider)
+        db.add(task)
+        db.commit()
+        db.refresh(task)
+        return task
+    finally:
+        db.close()
+
+
+def update_task(task_id: int, data: Dict[str, Any]) -> Optional[Task]:
+    """Update an existing task in the database"""
+    db = SessionLocal()
+    try:
+        task = db.query(Task).filter(Task.id == task_id).first()
+        if not task:
+            return None
+        
+        for key, value in data.items():
+            if hasattr(task, key):
+                setattr(task, key, value)
+        
+        db.commit()
+        db.refresh(task)
+        return task
+    finally:
+        db.close()
+
+
+def create_task_run(task_id: int, prompt: str, model: str, provider: str) -> TaskRun:
+    """Create a new task run in the database"""
+    db = SessionLocal()
+    try:
+        task_run = TaskRun(
+            task_id=task_id,
+            prompt=prompt,
+            model=model,
+            provider=provider,
+            is_done=False
+        )
+        db.add(task_run)
+        db.commit()
+        db.refresh(task_run)
+        return task_run
+    finally:
+        db.close()
+
+
+def update_task_run(task_run_id: int, data: Dict[str, Any]) -> Optional[TaskRun]:
+    """Update an existing task run in the database"""
+    db = SessionLocal()
+    try:
+        task_run = db.query(TaskRun).filter(TaskRun.id == task_run_id).first()
+        if not task_run:
+            return None
+        
+        for key, value in data.items():
+            if hasattr(task_run, key):
+                setattr(task_run, key, value)
+        
+        db.commit()
+        db.refresh(task_run)
+        return task_run
+    finally:
+        db.close()
+
+
+def create_run_step(task_run_id: int, step_number: int, data: Dict[str, Any]) -> RunStep:
+    """Create a new run step in the database"""
+    db = SessionLocal()
+    try:
+        run_step = RunStep(
+            task_run_id=task_run_id,
+            step_number=step_number,
+            result=data.get("result"),
+            errors=data.get("errors"),
+            is_done=data.get("is_done", False),
+            is_successful=data.get("is_successful"),
+            screenshot=data.get("screenshot")
+        )
+        db.add(run_step)
+        db.commit()
+        db.refresh(run_step)
+        return run_step
+    finally:
+        db.close()
+
+def update_run_step(task_run_id: int, step_number: int, data: Dict[str, Any]) -> Optional[RunStep]:
+    """Update an existing run step in the database"""
+    db = SessionLocal()
+    try:
+        run_step = db.query(RunStep).filter(
+            RunStep.task_run_id == task_run_id,
+            RunStep.step_number == step_number
+        ).first()
+        
+        if not run_step:
+            return None
+        
+        for key, value in data.items():
+            if hasattr(run_step, key):
+                setattr(run_step, key, value)
+        
+        db.commit()
+        db.refresh(run_step)
+        return run_step
+    finally:
+        db.close()
+
+def get_task(task_id: int) -> Optional[Task]:
+    """Get a task by ID"""
+    db = SessionLocal()
+    try:
+        return db.query(Task).filter(Task.id == task_id).first()
+    finally:
+        db.close()
+
+
+def get_task_run(task_run_id: int) -> Optional[TaskRun]:
+    """Get a task run by ID"""
+    db = SessionLocal()
+    try:
+        return db.query(TaskRun).filter(TaskRun.id == task_run_id).first()
+    finally:
+        db.close()
+
+
+def get_run_steps(task_run_id: int) -> List[RunStep]:
+    """Get all run steps for a task run"""
+    db = SessionLocal()
+    try:
+        return db.query(RunStep).filter(RunStep.task_run_id == task_run_id).order_by(RunStep.step_number).all()
+    finally:
+        db.close()
+
+
+def create_task_and_task_run(prompt: str, model: str, provider: str) -> Dict[str, Any]:
+    """Create a task and an associated task run by reusing existing functions"""
+    task = create_task(prompt=prompt, model=model, provider=provider)
+    task_run = create_task_run(
+        task_id=task.id,
+        prompt=prompt,
+        model=model,
+        provider=provider
+    )
+    
+    return {
+        "task": task,
+        "task_run": task_run
+    }
