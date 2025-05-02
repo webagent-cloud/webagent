@@ -8,6 +8,7 @@ from task_repository import (
     update_task_run,
     create_run_step,
 )
+from webhook_service import post_webhook
 from typing import Any, Optional
 from browser_use import Agent, Browser, BrowserConfig
 from pydantic import BaseModel, Field
@@ -19,11 +20,14 @@ class AgentRequest(BaseModel):
     task: str = Field(..., min_length=3, description="The task to be performed by the agent")
     model: str = "gpt-4o"
     provider: ProviderEnum = ProviderEnum.openai
+    webhook_url: Optional[str] = Field(None, description="URL to send webhook notification when task is complete")
 
 class AgentResponse(BaseModel):
     """
     Represents the complete response from the agent.
     """
+    task_id: Optional[int] = Field(None, description="The ID of the task")
+    task_run_id: Optional[int] = Field(None, description="The ID of the task run")
     history: Optional[list[HistoryItem]] = Field(None, description="List of steps in the history")
     result: Optional[Any] = Field(None, description="The final result of the agent's task")
     is_done: Optional[bool] = Field(None, description="Whether the agent has completed its task")
@@ -99,8 +103,10 @@ async def execute_agent(request: AgentRequest, task_id=None, task_run_id=None):
     })
     
     logger.info(f"Updated task run ID: {task_run_id} with results")
-        
-    return AgentResponse(
+    
+    response = AgentResponse(
+        task_id=task_id,
+        task_run_id=task_run_id,
         history=history,
         result=final_result,
         is_done=is_done,
@@ -108,3 +114,13 @@ async def execute_agent(request: AgentRequest, task_id=None, task_run_id=None):
         status=status,
         screenshots=screenshots,
     )
+    
+    # Send webhook if URL is provided
+    if request.webhook_url:
+        await post_webhook(
+            webhook_url=request.webhook_url,
+            data=response.model_dump(),
+            task_run_id=task_run_id,
+        )
+        
+    return response

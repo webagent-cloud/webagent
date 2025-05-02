@@ -23,7 +23,8 @@ async def run_agent(request: AgentRequest):
         result = create_task_and_task_run(
             prompt=request.task,
             model=request.model,
-            provider=request.provider.value
+            provider=request.provider.value,
+            webhook_url=request.webhook_url
         )
         task_id = result["task"].id
         task_run_id = result["task_run"].id
@@ -38,7 +39,8 @@ async def async_run_agent(request: AgentRequest, background_tasks: BackgroundTas
         result = create_task_and_task_run(
             prompt=request.task,
             model=request.model,
-            provider=request.provider.value
+            provider=request.provider.value,
+            webhook_url=request.webhook_url
         )
         task = result["task"]
         task_run = result["task_run"]
@@ -50,7 +52,11 @@ async def async_run_agent(request: AgentRequest, background_tasks: BackgroundTas
             task_run_id=task_run.id
         )
         
-        background_tasks.add_task(execute_agent, request, task.id, task_run.id)
+        # Create a wrapper function to await the async execute_agent function
+        async def execute_agent_wrapper(req, t_id, tr_id):
+            await execute_agent(req, t_id, tr_id)
+        
+        background_tasks.add_task(execute_agent_wrapper, request, task.id, task_run.id)
         
         logger.info(f"Added task to background: {request.task}")
         return response

@@ -3,9 +3,11 @@
 🚀 Call web agent through APIs!
 
 A very simple web agent server using excellent [Browser-use tool](https://github.com/browser-use/browser-use).
+- 🔗 Integrate into any app with our API
 - 🌐 Multiple LLM compatibility
 - 🔒 Hosted on your infrastructure
 - 💽 Store and retrieve results in your database
+- 🪝 Get notified of results with webhooks
 
 ## Installation
 
