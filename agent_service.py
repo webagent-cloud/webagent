@@ -10,9 +10,12 @@ from task_repository import (
 )
 from webhook_service import post_webhook
 from typing import Any, Optional
-from browser_use import Agent, Browser, BrowserConfig
-from pydantic import BaseModel, Field
+from browser_use import Agent, Browser, BrowserConfig, Controller
+from pydantic import BaseModel, Field, field_validator, computed_field
 import logging
+import json
+from jsonschema import Draft7Validator, exceptions as jsonschema_exceptions
+from jambo.schema_converter import SchemaConverter
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +24,44 @@ class AgentRequest(BaseModel):
     model: str = "gpt-4o"
     provider: ProviderEnum = ProviderEnum.openai
     webhook_url: Optional[str] = Field(None, description="URL to send webhook notification when task is complete")
+    json_schema: Optional[str | dict] = Field(None, description="The JSON schema for the task result")
+    @field_validator("json_schema")
+    @classmethod
+    def validate_json_schema(cls, v):
+        if isinstance(v, str):
+            try:
+                v = json.loads(v)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Invalid JSON string: {e.msg}")
+        try:
+            Draft7Validator.check_schema(v)
+        except jsonschema_exceptions.SchemaError as e:
+            raise ValueError(f"Invalid JSON Schema: {e.message}")
+        return v
+
+    @computed_field
+    @property
+    def json_schema_model(self) -> Any:
+        if self.json_schema is None:
+            return None
+        schema = self.json_schema
+        if isinstance(schema, str):
+            try:
+                schema = json.loads(schema)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Invalid JSON string: {e.msg}")
+        if "title" not in schema:
+            schema["title"] = "Model"
+        return SchemaConverter.build(schema)
+    
+    @computed_field
+    @property
+    def json_schema_str(self) -> str:
+        if self.json_schema is None:
+            return None
+        if isinstance(self.json_schema, str):
+            return self.json_schema
+        return json.dumps(self.json_schema, indent=2)
 
 class AgentResponse(BaseModel):
     """
@@ -55,6 +96,8 @@ async def execute_agent(request: AgentRequest, task_id=None, task_run_id=None):
         headless=True,
     )
 
+    controller = Controller(output_model=request.json_schema_model)
+
     browser = Browser(
         config=config,
     )
@@ -62,6 +105,7 @@ async def execute_agent(request: AgentRequest, task_id=None, task_run_id=None):
         task=request.task,
         llm=llm,
         browser=browser,
+        controller=controller,
     )
     
     agent_results = await agent.run()

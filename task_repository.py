@@ -17,6 +17,7 @@ class Task(Base):
     model = Column(String, nullable=False)
     provider = Column(String, nullable=False)
     webhook_url = Column(String, nullable=True)
+    json_schema = Column(String, nullable=True)
     runs = relationship("TaskRun", back_populates="task", cascade="all, delete-orphan")
 
     def to_dict(self):
@@ -25,7 +26,8 @@ class Task(Base):
             "prompt": self.prompt,
             "model": self.model,
             "provider": self.provider,
-            "webhook_url": self.webhook_url
+            "webhook_url": self.webhook_url,
+            "json_schema": self.json_schema
         }
 
 
@@ -38,6 +40,7 @@ class TaskRun(Base):
     model = Column(String, nullable=False)
     provider = Column(String, nullable=False)
     webhook_url = Column(String, nullable=True)
+    json_schema = Column(String, nullable=True)
     result = Column(Text, nullable=True)
     is_done = Column(Boolean, default=False)
     is_successful = Column(Boolean, nullable=True)
@@ -55,6 +58,7 @@ class TaskRun(Base):
             "model": self.model,
             "provider": self.provider,
             "webhook_url": self.webhook_url,
+            "json_schema": self.json_schema,
             "result": self.result,
             "is_done": self.is_done,
             "is_successful": self.is_successful,
@@ -90,11 +94,11 @@ class RunStep(Base):
 
 Base.metadata.create_all(bind=engine)
 
-def create_task(prompt: str, model: str, provider: str, webhook_url: Optional[str] = None) -> Task:
+def create_task(prompt: str, model: str, provider: str, webhook_url: Optional[str] = None, json_schema: Optional[str] = None) -> Task:
     """Create a new task in the database"""
     db = SessionLocal()
     try:
-        task = Task(prompt=prompt, model=model, provider=provider, webhook_url=webhook_url)
+        task = Task(prompt=prompt, model=model, provider=provider, webhook_url=webhook_url, json_schema=json_schema)
         db.add(task)
         db.commit()
         db.refresh(task)
@@ -122,7 +126,7 @@ def update_task(task_id: int, data: Dict[str, Any]) -> Optional[Task]:
         db.close()
 
 
-def create_task_run(task_id: int, prompt: str, model: str, provider: str, webhook_url: Optional[str] = None) -> TaskRun:
+def create_task_run(task_id: int, prompt: str, model: str, provider: str, webhook_url: Optional[str] = None, json_schema: Optional[str] = None) -> TaskRun:
     """Create a new task run in the database"""
     db = SessionLocal()
     try:
@@ -132,6 +136,7 @@ def create_task_run(task_id: int, prompt: str, model: str, provider: str, webhoo
             model=model,
             provider=provider,
             webhook_url=webhook_url,
+            json_schema=json_schema,
             is_done=False
         )
         db.add(task_run)
@@ -230,15 +235,16 @@ def get_run_steps(task_run_id: int) -> List[RunStep]:
         db.close()
 
 
-def create_task_and_task_run(prompt: str, model: str, provider: str, webhook_url: Optional[str] = None) -> Dict[str, Any]:
+def create_task_and_task_run(prompt: str, model: str, provider: str, webhook_url: Optional[str] = None, json_schema: Optional[str] = None) -> Dict[str, Any]:
     """Create a task and an associated task run by reusing existing functions"""
-    task = create_task(prompt=prompt, model=model, provider=provider, webhook_url=webhook_url)
+    task = create_task(prompt=prompt, model=model, provider=provider, webhook_url=webhook_url, json_schema=json_schema)
     task_run = create_task_run(
         task_id=task.id,
         prompt=prompt,
         model=model,
         provider=provider,
-        webhook_url=webhook_url
+        webhook_url=webhook_url,
+        json_schema=json_schema
     )
     
     return {

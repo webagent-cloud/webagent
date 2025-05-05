@@ -24,7 +24,8 @@ async def run_agent(request: AgentRequest):
             prompt=request.task,
             model=request.model,
             provider=request.provider.value,
-            webhook_url=request.webhook_url
+            webhook_url=request.webhook_url,
+            json_schema=request.json_schema_str
         )
         task_id = result["task"].id
         task_run_id = result["task_run"].id
@@ -40,7 +41,8 @@ async def async_run_agent(request: AgentRequest, background_tasks: BackgroundTas
             prompt=request.task,
             model=request.model,
             provider=request.provider.value,
-            webhook_url=request.webhook_url
+            webhook_url=request.webhook_url,
+            json_schema=request.json_schema_str
         )
         task = result["task"]
         task_run = result["task_run"]

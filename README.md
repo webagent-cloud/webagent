@@ -8,6 +8,7 @@ A very simple web agent server using excellent [Browser-use tool](https://github
 - 🔒 Host on your infrastructure
 - 💽 Store and retrieve results in database
 - 🪝 Get notified of results with webhooks
+- 🗄️ Structure results with JSON Schema
 
 ## Installation
 
