@@ -2,7 +2,17 @@
 
 🚀 Automate repetitive browser tasks!
 
-A very simple web agent server using excellent [Browser-use tool](https://github.com/browser-use/browser-use).
+Try it yourself:
+
+```
+curl -X POST http://localhost:3000/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task": "Go to https://webagent.cloud and explain what the platform does."
+  }'
+```
+
+The universal connector for web agents :
 - 🔗 Integrate into any app with our API
 - 🌐 Multiple LLM compatibility
 - 🔎 Supports multiple Browsers providers
