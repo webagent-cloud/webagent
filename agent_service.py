@@ -16,6 +16,7 @@ import logging
 import json
 from jsonschema import Draft7Validator, exceptions as jsonschema_exceptions
 from jambo.schema_converter import SchemaConverter
+from browser_providers.browser_service_selector import get_browser_service
 
 logger = logging.getLogger(__name__)
 
@@ -91,12 +92,15 @@ async def execute_agent(request: AgentRequest, task_id=None, task_run_id=None):
     logger.info(f"Starting agent with task: {request.task}, provider: {request.provider}, model: {request.model}")
     
     llm = get_llm(request.provider, request.model)
+    browser_service = get_browser_service()
+    session_response = await browser_service.create_session(session_timeout=900)
     
+    controller = Controller(output_model=request.json_schema_model)
+
     config = BrowserConfig(
+        cdp_url=session_response["cdp_url"],
         headless=True,
     )
-
-    controller = Controller(output_model=request.json_schema_model)
 
     browser = Browser(
         config=config,
@@ -109,6 +113,9 @@ async def execute_agent(request: AgentRequest, task_id=None, task_run_id=None):
     )
     
     agent_results = await agent.run()
+
+    await browser_service.close_session()
+
     final_result = agent_results.final_result()
     is_done = agent_results.is_done()
     is_successful = agent_results.is_successful()
