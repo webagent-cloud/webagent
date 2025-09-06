@@ -1,10 +1,11 @@
 # Webagent
 
-🚀 Call web agent through APIs!
+🚀 Automate repetitive browser tasks!
 
 A very simple web agent server using excellent [Browser-use tool](https://github.com/browser-use/browser-use).
 - 🔗 Integrate into any app with our API
 - 🌐 Multiple LLM compatibility
+- 🔎 Supports multiple Browsers providers
 - 🔒 Host on your infrastructure
 - 💽 Store and retrieve results in database
 - 🪝 Get notified of results with webhooks
