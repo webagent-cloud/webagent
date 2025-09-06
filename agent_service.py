@@ -10,7 +10,7 @@ from task_repository import (
 )
 from webhook_service import post_webhook
 from typing import Any, Optional
-from browser_use import Agent, Browser, BrowserConfig, Controller
+from browser_use import Agent, Browser, Controller
 from pydantic import BaseModel, Field, field_validator, computed_field
 import logging
 import json
@@ -96,15 +96,10 @@ async def execute_agent(request: AgentRequest, task_id=None, task_run_id=None):
     session_response = await browser_service.create_session(session_timeout=900)
     
     controller = Controller(output_model=request.json_schema_model)
-
-    config = BrowserConfig(
-        cdp_url=session_response["cdp_url"],
-        headless=True,
-    )
-
     browser = Browser(
-        config=config,
+        cdp_url=session_response["cdp_url"],
     )
+
     agent = Agent(
         task=request.task,
         llm=llm,

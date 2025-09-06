@@ -7,7 +7,7 @@ anyio==4.9.0
 attrs==25.3.0
 backoff==2.2.1
 beautifulsoup4==4.13.3
-browser-use==0.1.40
+browser-use==0.7.3
 cachetools==5.5.2
 certifi==2025.1.31
 charset-normalizer==3.4.1
@@ -52,7 +52,7 @@ ollama==0.4.7
 openai==1.66.3
 orjson==3.10.15
 packaging==24.2
-playwright==1.51.0
+playwright==1.55.0
 posthog==3.21.0
 propcache==0.3.1
 proto-plus==1.26.1
@@ -87,3 +87,4 @@ yarl==1.20.0
 zstandard==0.23.0
 jsonschema==4.23.0
 jambo==0.1.0.post3
+browserbase==1.4.0

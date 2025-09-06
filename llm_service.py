@@ -7,25 +7,29 @@ from langchain_mistralai import ChatMistralAI
 from langchain_together import Together
 from pydantic import SecretStr
 import os
+from chat.chat import ChatLangchain
 
-def get_llm(provider: ProviderEnum, model: str):
+
+def get_llm(provider: ProviderEnum, model: str, callbacks: list = None) -> ChatLangchain:
     """
     Returns the appropriate LLM based on the provider and model.
     """
     if provider == ProviderEnum.openai:
-        return ChatOpenAI(model=model)
+        langchain_model = ChatOpenAI(model=model, callbacks=callbacks)
     elif provider == ProviderEnum.deepseek:
         api_key = os.getenv("DEEPSEEK_API_KEY")
-        return ChatOpenAI(base_url='https://api.deepseek.com/v1', model=model, api_key=SecretStr(api_key))
+        langchain_model = ChatOpenAI(base_url='https://api.deepseek.com/v1', model=model, api_key=SecretStr(api_key))
     elif provider == ProviderEnum.anthropic:
-        return ChatAnthropic(model_name=model)
+        langchain_model = ChatAnthropic(model_name=model)
     elif provider == ProviderEnum.google:
-        return ChatGoogleGenerativeAI(model=model)
+        langchain_model = ChatGoogleGenerativeAI(model=model)
     elif provider == ProviderEnum.groq:
-        return ChatGroq(model=model)
+        langchain_model = ChatGroq(model=model)
     elif provider == ProviderEnum.mistral:
-        return ChatMistralAI(model=model)
+        langchain_model = ChatMistralAI(model=model)
     elif provider == ProviderEnum.together:
-        return Together(model=model)
+        langchain_model = Together(model=model)
     else:
-        return ChatOpenAI(model=model)
+        langchain_model = ChatOpenAI(model=model)
+
+    return ChatLangchain(langchain_model)
