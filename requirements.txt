@@ -7,7 +7,7 @@ anyio==4.9.0
 attrs==25.3.0
 backoff==2.2.1
 beautifulsoup4==4.13.3
-browser-use==0.7.3
+browser-use==0.7.10
 cachetools==5.5.2
 certifi==2025.1.31
 charset-normalizer==3.4.1
@@ -88,4 +88,4 @@ zstandard==0.23.0
 jsonschema==4.23.0
 jambo==0.1.0.post3
 browserbase==1.4.0
-notte==1.6.9
+notte==1.7.5
