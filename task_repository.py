@@ -78,7 +78,6 @@ class RunStep(Base):
     errors = Column(Text, nullable=True)
     is_done = Column(Boolean, default=False)
     is_successful = Column(Boolean, nullable=True)
-    screenshot = Column(Text, nullable=True)
     task_run = relationship("TaskRun", back_populates="steps")
 
     def to_dict(self):
@@ -89,7 +88,6 @@ class RunStep(Base):
             "errors": self.errors,
             "is_done": self.is_done,
             "is_successful": self.is_successful,
-            "screenshot": self.screenshot
         }
 
 Base.metadata.create_all(bind=engine)
@@ -177,7 +175,6 @@ def create_run_step(task_run_id: int, step_number: int, data: Dict[str, Any]) ->
             errors=data.get("errors"),
             is_done=data.get("is_done", False),
             is_successful=data.get("is_successful"),
-            screenshot=data.get("screenshot")
         )
         db.add(run_step)
         db.commit()

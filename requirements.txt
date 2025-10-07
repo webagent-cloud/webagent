@@ -88,3 +88,4 @@ zstandard==0.23.0
 jsonschema==4.23.0
 jambo==0.1.0.post3
 browserbase==1.4.0
+notte==1.6.9

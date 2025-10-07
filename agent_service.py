@@ -10,13 +10,13 @@ from task_repository import (
 )
 from webhook_service import post_webhook
 from typing import Any, Optional
-from browser_use import Agent, Browser, Controller
 from pydantic import BaseModel, Field, field_validator, computed_field
 import logging
 import json
 from jsonschema import Draft7Validator, exceptions as jsonschema_exceptions
 from jambo.schema_converter import SchemaConverter
 from browser_providers.browser_service_selector import get_browser_service
+from engine_providers.engine_service_selector import get_engine_service
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +75,6 @@ class AgentResponse(BaseModel):
     is_done: Optional[bool] = Field(None, description="Whether the agent has completed its task")
     is_successful: Optional[bool] = Field(None, description="Whether the agent was successful in completing its task")
     status: StatusEnum = Field(StatusEnum.in_progress, description="The status of the agent's task")
-    screenshots: Optional[Any] = Field(None, description="The Base64 screenshots taken during the task")
 
 class AsyncAgentResponse(BaseModel):
     """
@@ -95,78 +94,60 @@ async def execute_agent(request: AgentRequest, task_id=None, task_run_id=None):
     browser_service = get_browser_service()
     session_response = await browser_service.create_session(session_timeout=900)
     
-    controller = Controller(output_model=request.json_schema_model)
-    browser = Browser(
-        cdp_url=session_response["cdp_url"],
-    )
-
-    agent = Agent(
-        task=request.task,
-        llm=llm,
-        browser=browser,
-        controller=controller,
-    )
+    # Get the appropriate engine service based on configuration
+    engine_service = get_engine_service()
     
-    agent_results = await agent.run()
-
-    await browser_service.close_session()
-
-    final_result = agent_results.final_result()
-    is_done = agent_results.is_done()
-    is_successful = agent_results.is_successful()
-    
-    history = [
-        HistoryItem(
-            is_done=item.is_done,
-            success=item.success,
-            extracted_content=item.extracted_content,
-            error=item.error,
-            include_in_memory=item.include_in_memory,
-        )
-        for item in agent_results.action_results()
-    ]
-    
-    screenshots = agent_results.screenshots()
-    
-    status = StatusEnum.in_progress
-    if is_done:
-        status = StatusEnum.success if is_successful else StatusEnum.failure
-    
-    for i, item in enumerate(agent_results.action_results()):
-        step_data = {
-            "result": item.extracted_content,
-            "errors": item.error,
-            "is_done": item.is_done,
-            "is_successful": item.success,
-            "screenshot": screenshots[i] if i < len(screenshots) else None
-        }
-        create_run_step(task_run_id, i + 1, step_data)
-    
-    update_task_run(task_run_id, {
-        "result": final_result,
-        "is_done": is_done,
-        "is_successful": is_successful
-    })
-    
-    logger.info(f"Updated task run ID: {task_run_id} with results")
-    
-    response = AgentResponse(
-        task_id=task_id,
-        task_run_id=task_run_id,
-        history=history,
-        result=final_result,
-        is_done=is_done,
-        is_successful=is_successful,
-        status=status,
-        screenshots=screenshots,
-    )
-    
-    # Send webhook if URL is provided
-    if request.webhook_url:
-        await post_webhook(
-            webhook_url=request.webhook_url,
-            data=response.model_dump(),
-            task_run_id=task_run_id,
+    try:
+        # Execute the agent using the selected engine - this now returns standardized EngineServiceResult
+        engine_result = await engine_service.run(
+            request=request,
+            session_response=session_response,
+            llm=llm
         )
         
-    return response
+        # Extract standardized results from engine service
+        final_result = engine_result.final_result
+        is_done = engine_result.is_done
+        is_successful = engine_result.is_successful
+        history = engine_result.history
+        
+        # Create run steps in database - data is already prepared by engine service
+        for i, step_data in enumerate(engine_result.run_steps):
+            create_run_step(task_run_id, i + 1, step_data)
+        
+        # Update task run with results
+        update_task_run(task_run_id, {
+            "result": final_result,
+            "is_done": is_done,
+            "is_successful": is_successful
+        })
+        
+        logger.info(f"Updated task run ID: {task_run_id} with results")
+        
+        status = StatusEnum.in_progress
+        if is_done:
+            status = StatusEnum.success if is_successful else StatusEnum.failure
+        
+        response = AgentResponse(
+            task_id=task_id,
+            task_run_id=task_run_id,
+            history=history,
+            result=final_result,
+            is_done=is_done,
+            is_successful=is_successful,
+            status=status,
+        )
+        
+        # Send webhook if URL is provided
+        if request.webhook_url:
+            await post_webhook(
+                webhook_url=request.webhook_url,
+                data=response.model_dump(),
+                task_run_id=task_run_id,
+            )
+            
+        return response
+        
+    finally:
+        # Always close the browser session
+        await browser_service.close_session()

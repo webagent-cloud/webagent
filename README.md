@@ -131,10 +131,7 @@ Once the server is started, you can access the interactive API documentation at:
   "result": "Example Domain",
   "is_done": true,
   "is_successful": true,
-  "status": "success",
-  "screenshots": [
-    "data:image/png;base64,..."
-  ]
+  "status": "success"
 }
 ```
 
