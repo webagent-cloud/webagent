@@ -25,6 +25,10 @@ class AgentRequest(BaseModel):
     task: str = Field(..., min_length=3, description="The task to be performed by the agent")
     model: str = "gpt-4o"
     provider: ProviderEnum = ProviderEnum.openai
+    wait_for_completion: Optional[bool] = Field(
+        True,
+        description="Whether to wait for the task to complete before returning the response. If false, the task will be executed in the background and the response will contain only the task ID."
+    )
     webhook_url: Optional[str] = Field(None, description="URL to send webhook notification when task is complete")
     json_schema: Optional[str | dict] = Field(None, description="The JSON schema for the task result")
     @field_validator("json_schema")
