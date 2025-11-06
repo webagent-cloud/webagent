@@ -1,11 +1,11 @@
 import logging
 from .engine_service import EngineService, EngineServiceResult
 from typing import Any, TYPE_CHECKING
-from models import HistoryItem
+from webagent.models import HistoryItem
 from browser_use import Agent, Browser, Controller
 
 if TYPE_CHECKING:
-    from agent_service import AgentRequest
+    from webagent.agent_service import AgentRequest
 
 logger = logging.getLogger(__name__)
 

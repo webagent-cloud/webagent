@@ -1,5 +1,5 @@
 import uvicorn
-from api import app
+from webagent.api import app
 
 import os
 os.environ["DISABLE_TELEMETRY"] = "true"

@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import Any, TYPE_CHECKING, Dict, List, Optional
-from models import HistoryItem
+from webagent.models import HistoryItem
 
 if TYPE_CHECKING:
-    from agent_service import AgentRequest
+    from webagent.agent_service import AgentRequest
 
 
 class EngineServiceResult:

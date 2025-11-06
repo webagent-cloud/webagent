@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from typing import Optional, List, Dict, Any
 import json
-from models import ProviderEnum
+from webagent.models import ProviderEnum
 
 engine = create_engine('sqlite:///tasks.db', echo=True)
 Base = declarative_base()

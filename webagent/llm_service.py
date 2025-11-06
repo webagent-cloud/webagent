@@ -1,4 +1,4 @@
-from models import ProviderEnum
+from webagent.models import ProviderEnum
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -7,7 +7,7 @@ from langchain_mistralai import ChatMistralAI
 from langchain_together import Together
 from pydantic import SecretStr
 import os
-from chat.chat import ChatLangchain
+from webagent.chat.chat import ChatLangchain
 
 
 def get_llm(provider: ProviderEnum, model: str, callbacks: list = None) -> ChatLangchain:

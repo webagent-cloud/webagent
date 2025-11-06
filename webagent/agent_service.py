@@ -1,22 +1,22 @@
-from models import (
+from webagent.models import (
     ProviderEnum,
     StatusEnum,
     HistoryItem,
 )
-from llm_service import get_llm
-from task_repository import (
+from webagent.llm_service import get_llm
+from webagent.task_repository import (
     update_task_run,
     create_run_step,
 )
-from webhook_service import post_webhook
+from webagent.webhook_service import post_webhook
 from typing import Any, Optional
 from pydantic import BaseModel, Field, field_validator, computed_field
 import logging
 import json
 from jsonschema import Draft7Validator, exceptions as jsonschema_exceptions
 from jambo.schema_converter import SchemaConverter
-from browser_providers.browser_service_selector import get_browser_service
-from engine_providers.engine_service_selector import get_engine_service
+from webagent.browser_providers.browser_service_selector import get_browser_service
+from webagent.engine_providers.engine_service_selector import get_engine_service
 
 logger = logging.getLogger(__name__)
 

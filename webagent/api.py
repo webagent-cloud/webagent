@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
-from agent_service import execute_agent, AgentRequest, AgentResponse, AsyncAgentResponse
-from task_repository import (
+from webagent.agent_service import execute_agent, AgentRequest, AgentResponse, AsyncAgentResponse
+from webagent.task_repository import (
     create_task_and_task_run,
 )
 from dotenv import load_dotenv
