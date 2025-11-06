@@ -7,6 +7,7 @@ from webagent.llm_service import get_llm
 from webagent.task_repository import (
     update_task_run,
     create_run_step,
+    create_run_action,
 )
 from webagent.webhook_service import post_webhook
 from typing import Any, Optional
@@ -110,11 +111,25 @@ async def execute_agent(request: AgentRequest, task_id=None, task_run_id=None):
         is_done = engine_result.is_done
         is_successful = engine_result.is_successful
         history = engine_result.history
-        
-        # Create run steps in database - data is already prepared by engine service
-        for i, step_data in enumerate(engine_result.run_steps):
-            create_run_step(task_run_id, i + 1, step_data)
-        
+        screenshots = engine_result.screenshots
+
+        # Create run steps and actions in database from history
+        for i, history_item in enumerate(history):
+            step_number = i + 1
+            # Create the run step with description and screenshot
+            step_data = {
+                "description": history_item.description,
+                "screenshot": screenshots[i] if i < len(screenshots) else None
+            }
+            create_run_step(task_run_id, step_number, step_data)
+
+            # Create run actions for each action in the step
+            if history_item.actions:
+                for j, action in enumerate(history_item.actions):
+                    action_number = j + 1
+                    action_data = action.model_dump()
+                    create_run_action(task_run_id, step_number, action_number, action_data)
+
         # Update task run with results
         update_task_run(task_run_id, {
             "result": final_result,

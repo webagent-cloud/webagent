@@ -99,26 +99,13 @@ class BrowseruseService(EngineService):
 
         # Build history from action results
         history = extract_history(agent_results)
-        
+
         screenshots = agent_results.screenshots()
-        
-        # Build run steps data for database storage
-        run_steps = []
-        for i, item in enumerate(agent_results.action_results()):
-            step_data = {
-                "result": item.extracted_content,
-                "errors": item.error,
-                "is_done": item.is_done,
-                "is_successful": item.success,
-                "screenshot": screenshots[i] if i < len(screenshots) else None
-            }
-            run_steps.append(step_data)
-        
+
         return EngineServiceResult(
             final_result=final_result,
             is_done=is_done,
             is_successful=is_successful,
             history=history,
-            screenshots=screenshots,
-            run_steps=run_steps
+            screenshots=screenshots
         )

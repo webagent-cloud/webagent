@@ -1,8 +1,7 @@
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, ForeignKey, Text
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, ForeignKey, ForeignKeyConstraint, Text, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from typing import Optional, List, Dict, Any
-import json
 from webagent.models import ProviderEnum
 
 engine = create_engine('sqlite:///tasks.db', echo=True)
@@ -74,20 +73,58 @@ class RunStep(Base):
 
     task_run_id = Column(Integer, ForeignKey("task_runs.id"), primary_key=True)
     step_number = Column(Integer, primary_key=True)
-    result = Column(Text, nullable=True)
-    errors = Column(Text, nullable=True)
-    is_done = Column(Boolean, default=False)
-    is_successful = Column(Boolean, nullable=True)
+    description = Column(Text, nullable=True)
+    screenshot = Column(Text, nullable=True)
     task_run = relationship("TaskRun", back_populates="steps")
+    actions = relationship("RunAction", back_populates="run_step", cascade="all, delete-orphan")
 
     def to_dict(self):
         return {
             "task_run_id": self.task_run_id,
             "step_number": self.step_number,
-            "result": self.result,
-            "errors": self.errors,
+            "description": self.description,
+            "screenshot": self.screenshot,
+            "actions": [action.to_dict() for action in self.actions]
+        }
+
+
+class RunAction(Base):
+    __tablename__ = "run_actions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    task_run_id = Column(Integer, nullable=False)
+    step_number = Column(Integer, nullable=False)
+    action_number = Column(Integer, nullable=False)
+    name = Column(String, nullable=False)
+    params = Column(JSON, nullable=True)
+    is_done = Column(Boolean, default=False)
+    success = Column(Boolean, nullable=True)
+    extracted_content = Column(Text, nullable=True)
+    error = Column(Text, nullable=True)
+    include_in_memory = Column(Boolean, nullable=True)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ['task_run_id', 'step_number'],
+            ['run_steps.task_run_id', 'run_steps.step_number']
+        ),
+    )
+
+    run_step = relationship("RunStep", back_populates="actions")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "task_run_id": self.task_run_id,
+            "step_number": self.step_number,
+            "action_number": self.action_number,
+            "name": self.name,
+            "params": self.params,
             "is_done": self.is_done,
-            "is_successful": self.is_successful,
+            "success": self.success,
+            "extracted_content": self.extracted_content,
+            "error": self.error,
+            "include_in_memory": self.include_in_memory,
         }
 
 Base.metadata.create_all(bind=engine)
@@ -171,15 +208,37 @@ def create_run_step(task_run_id: int, step_number: int, data: Dict[str, Any]) ->
         run_step = RunStep(
             task_run_id=task_run_id,
             step_number=step_number,
-            result=data.get("result"),
-            errors=data.get("errors"),
-            is_done=data.get("is_done", False),
-            is_successful=data.get("is_successful"),
+            description=data.get("description"),
+            screenshot=data.get("screenshot"),
         )
         db.add(run_step)
         db.commit()
         db.refresh(run_step)
         return run_step
+    finally:
+        db.close()
+
+
+def create_run_action(task_run_id: int, step_number: int, action_number: int, data: Dict[str, Any]) -> RunAction:
+    """Create a new run action in the database"""
+    db = SessionLocal()
+    try:
+        run_action = RunAction(
+            task_run_id=task_run_id,
+            step_number=step_number,
+            action_number=action_number,
+            name=data.get("name"),
+            params=data.get("params"),
+            is_done=data.get("is_done", False),
+            success=data.get("success"),
+            extracted_content=data.get("extracted_content"),
+            error=data.get("error"),
+            include_in_memory=data.get("include_in_memory"),
+        )
+        db.add(run_action)
+        db.commit()
+        db.refresh(run_action)
+        return run_action
     finally:
         db.close()
 
@@ -228,6 +287,18 @@ def get_run_steps(task_run_id: int) -> List[RunStep]:
     db = SessionLocal()
     try:
         return db.query(RunStep).filter(RunStep.task_run_id == task_run_id).order_by(RunStep.step_number).all()
+    finally:
+        db.close()
+
+
+def get_run_actions(task_run_id: int, step_number: int) -> List[RunAction]:
+    """Get all run actions for a specific step"""
+    db = SessionLocal()
+    try:
+        return db.query(RunAction).filter(
+            RunAction.task_run_id == task_run_id,
+            RunAction.step_number == step_number
+        ).order_by(RunAction.action_number).all()
     finally:
         db.close()
 

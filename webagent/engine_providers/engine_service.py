@@ -14,15 +14,13 @@ class EngineServiceResult:
         is_done: bool,
         is_successful: bool,
         history: List[HistoryItem],
-        screenshots: List[Any],
-        run_steps: List[Dict[str, Any]]
+        screenshots: List[Any]
     ):
         self.final_result = final_result
         self.is_done = is_done
         self.is_successful = is_successful
         self.history = history
         self.screenshots = screenshots
-        self.run_steps = run_steps
 
 
 class EngineService(ABC):
