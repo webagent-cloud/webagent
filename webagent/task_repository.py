@@ -273,6 +273,15 @@ def get_task(task_id: int) -> Optional[Task]:
         db.close()
 
 
+def get_all_tasks() -> List[Task]:
+    """Get all tasks"""
+    db = SessionLocal()
+    try:
+        return db.query(Task).order_by(Task.id.desc()).all()
+    finally:
+        db.close()
+
+
 def get_task_run(task_run_id: int) -> Optional[TaskRun]:
     """Get a task run by ID"""
     db = SessionLocal()

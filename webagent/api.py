@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
 from webagent.agent_service import execute_agent, AgentRequest, AgentResponse, AsyncAgentResponse
 from webagent.task_repository import (
     create_task_and_task_run,
+    get_all_tasks,
+    get_task,
 )
 from dotenv import load_dotenv
 import logging
@@ -16,6 +18,32 @@ app = FastAPI(
     description="API to execute automated tasks on browser using different LLM providers.",
     version="0.1.0"
 )
+
+@app.get("/tasks")
+async def list_tasks():
+    """Get all tasks"""
+    try:
+        tasks = get_all_tasks()
+        return {"tasks": [task.to_dict() for task in tasks]}
+    except Exception as e:
+        logger.error(f"Error while fetching tasks: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error while fetching tasks")
+
+
+@app.get("/tasks/{task_id}")
+async def get_task_by_id(task_id: int):
+    """Get a single task by ID"""
+    try:
+        task = get_task(task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail=f"Task with ID {task_id} not found")
+        return task.to_dict()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error while fetching task {task_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error while fetching task")
+
 
 @app.post("/run", response_model=AgentResponse | AsyncAgentResponse)
 async def run_agent(request: AgentRequest, background_tasks: BackgroundTasks):
