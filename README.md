@@ -118,7 +118,7 @@ Once the server is started, you can access the interactive API documentation at:
 {
   "task": "go to this site https://example.com and retrieve the page title",
   "provider": "openai",
-  "model": "gpt-4o"
+  "model": "o3"
 }
 ```
 
@@ -150,7 +150,7 @@ curl -X 'POST' \
   -H 'Content-Type: application/json' \
   -d '{
   "task": "go to this site https://example.com and retrieve the page title",
-  "model": "gpt-4o",
+  "model": "o3",
   "provider": "openai"
 }'
 ```
@@ -168,7 +168,7 @@ response = requests.post(
     f"{base_url}/run",
     json={
         "task": "go to this site https://example.com and retrieve the page title",
-        "model": "gpt-4o",
+        "model": "o3",
         "provider": "openai"
     }
 )

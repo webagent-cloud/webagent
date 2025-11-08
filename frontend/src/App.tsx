@@ -14,7 +14,7 @@ function App() {
   const { tasks, loading: tasksLoading, error: tasksError, refreshTasks } = useTasks()
   const [formData, setFormData] = useState<TaskFormData>({
     prompt: '',
-    model: 'gpt-4o',
+    model: 'o3',
     provider: 'openai'
   })
 
@@ -92,7 +92,7 @@ function App() {
                   id="model"
                   value={formData.model}
                   onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                  placeholder="e.g., gpt-4o"
+                  placeholder="e.g., o3"
                   required
                   className="w-full px-3 py-2 border border-white/20 rounded bg-black/20 text-inherit font-inherit text-base focus:outline-none focus:border-[#646cff]"
                 />
