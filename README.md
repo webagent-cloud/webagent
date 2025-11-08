@@ -46,6 +46,12 @@ GROK_API_KEY=
 NOVITA_API_KEY=
 ```
 
+4. Run the server
+
+   ```bash
+   python server.py
+   ```
+
 ### Option 2: Docker Installation
 
 #### Using Docker
