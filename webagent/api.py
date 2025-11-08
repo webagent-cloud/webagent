@@ -1,5 +1,6 @@
-from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Request, BackgroundTasks, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from webagent.agent_service import execute_agent, AgentRequest, AgentResponse, AsyncAgentResponse, TaskRunRequest
 from webagent.task_repository import (
     create_task_and_task_run,
@@ -10,6 +11,8 @@ from webagent.task_repository import (
 from webagent.models import ProviderEnum
 from dotenv import load_dotenv
 import logging
+import os
+from pathlib import Path
 
 load_dotenv()
 
@@ -31,7 +34,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/tasks")
+# Create API router with /api prefix
+api_router = APIRouter(prefix="/api")
+
+@api_router.get("/tasks")
 async def list_tasks():
     """Get all tasks"""
     try:
@@ -42,7 +48,7 @@ async def list_tasks():
         raise HTTPException(status_code=500, detail="Error while fetching tasks")
 
 
-@app.get("/tasks/{task_id}")
+@api_router.get("/tasks/{task_id}")
 async def get_task_by_id(task_id: int):
     """Get a single task by ID"""
     try:
@@ -57,7 +63,7 @@ async def get_task_by_id(task_id: int):
         raise HTTPException(status_code=500, detail="Error while fetching task")
 
 
-@app.post("/tasks/{task_id}/run", response_model=AgentResponse | AsyncAgentResponse)
+@api_router.post("/tasks/{task_id}/run", response_model=AgentResponse | AsyncAgentResponse)
 async def run_task(task_id: int, request: TaskRunRequest, background_tasks: BackgroundTasks):
     """Run an existing task with optional parameter overrides"""
     try:
@@ -127,7 +133,7 @@ async def run_task(task_id: int, request: TaskRunRequest, background_tasks: Back
         raise HTTPException(status_code=500, detail=f"Error while running task")
 
 
-@app.post("/run", response_model=AgentResponse | AsyncAgentResponse)
+@api_router.post("/run", response_model=AgentResponse | AsyncAgentResponse)
 async def run_agent(request: AgentRequest, background_tasks: BackgroundTasks):
     try:
         result = create_task_and_task_run(
@@ -161,3 +167,18 @@ async def run_agent(request: AgentRequest, background_tasks: BackgroundTasks):
     except Exception as e:
         logger.error(f"Error while executing agent {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error while executing agent")
+
+
+# Include the API router in the app
+app.include_router(api_router)
+
+# Mount static files
+# Get the path to the frontend/dist directory
+static_dir = Path(__file__).parent.parent / "frontend" / "dist"
+
+# Check if dist directory exists, if not log a warning
+if static_dir.exists() and static_dir.is_dir():
+    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+    logger.info(f"Serving static files from {static_dir}")
+else:
+    logger.warning(f"Static directory not found at {static_dir}. Frontend will not be served.")

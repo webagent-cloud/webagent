@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { API_BASE_URL } from '../config/api'
 
 export interface Task {
   id: number
@@ -15,8 +16,6 @@ export interface UseTasksReturn {
   error: string | null
   refreshTasks: () => Promise<void>
 }
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 export const useTasks = (): UseTasksReturn => {
   const [tasks, setTasks] = useState<Task[]>([])

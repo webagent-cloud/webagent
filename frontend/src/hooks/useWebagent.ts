@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { API_BASE_URL } from '../config/api'
 
 export interface TaskRequest {
   task: string
@@ -21,8 +22,6 @@ export interface UseWebagentReturn {
   error: string | null
   reset: () => void
 }
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 export const useWebagent = (): UseWebagentReturn => {
   const [loading, setLoading] = useState(false)
