@@ -59,7 +59,59 @@ class AgentRequest(BaseModel):
         if "title" not in schema:
             schema["title"] = "Model"
         return SchemaConverter.build(schema)
-    
+
+    @computed_field
+    @property
+    def json_schema_str(self) -> str:
+        if self.json_schema is None:
+            return None
+        if isinstance(self.json_schema, str):
+            return self.json_schema
+        return json.dumps(self.json_schema, indent=2)
+
+class TaskRunRequest(BaseModel):
+    """Request model for running an existing task with optional parameter overrides"""
+    task: Optional[str] = Field(None, min_length=3, description="Override task prompt")
+    model: Optional[str] = Field(None, description="Override model")
+    provider: Optional[ProviderEnum] = Field(None, description="Override provider")
+    wait_for_completion: Optional[bool] = Field(
+        None,
+        description="Whether to wait for the task to complete before returning the response. If false, the task will be executed in the background and the response will contain only the task ID."
+    )
+    webhook_url: Optional[str] = Field(None, description="Override webhook URL")
+    json_schema: Optional[str | dict] = Field(None, description="Override JSON schema for the task result")
+
+    @field_validator("json_schema")
+    @classmethod
+    def validate_json_schema(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, str):
+            try:
+                v = json.loads(v)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Invalid JSON string: {e.msg}")
+        try:
+            Draft7Validator.check_schema(v)
+        except jsonschema_exceptions.SchemaError as e:
+            raise ValueError(f"Invalid JSON Schema: {e.message}")
+        return v
+
+    @computed_field
+    @property
+    def json_schema_model(self) -> Any:
+        if self.json_schema is None:
+            return None
+        schema = self.json_schema
+        if isinstance(schema, str):
+            try:
+                schema = json.loads(schema)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Invalid JSON string: {e.msg}")
+        if "title" not in schema:
+            schema["title"] = "Model"
+        return SchemaConverter.build(schema)
+
     @computed_field
     @property
     def json_schema_str(self) -> str:

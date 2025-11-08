@@ -17,6 +17,8 @@ class Task(Base):
     provider = Column(String, nullable=False)
     webhook_url = Column(String, nullable=True)
     json_schema = Column(String, nullable=True)
+    cached_workflow = Column(JSON, nullable=True)
+    use_cached_workflow = Column(Boolean, default=False)
     runs = relationship("TaskRun", back_populates="task", cascade="all, delete-orphan")
 
     def to_dict(self):
@@ -26,7 +28,9 @@ class Task(Base):
             "model": self.model,
             "provider": self.provider,
             "webhook_url": self.webhook_url,
-            "json_schema": self.json_schema
+            "json_schema": self.json_schema,
+            "cached_workflow": self.cached_workflow,
+            "use_cached_workflow": self.use_cached_workflow
         }
 
 
@@ -129,11 +133,11 @@ class RunAction(Base):
 
 Base.metadata.create_all(bind=engine)
 
-def create_task(prompt: str, model: str, provider: str, webhook_url: Optional[str] = None, json_schema: Optional[str] = None) -> Task:
+def create_task(prompt: str, model: str, provider: str, webhook_url: Optional[str] = None, json_schema: Optional[str] = None, cached_workflow: Optional[Dict[str, Any]] = None, use_cached_workflow: bool = False) -> Task:
     """Create a new task in the database"""
     db = SessionLocal()
     try:
-        task = Task(prompt=prompt, model=model, provider=provider, webhook_url=webhook_url, json_schema=json_schema)
+        task = Task(prompt=prompt, model=model, provider=provider, webhook_url=webhook_url, json_schema=json_schema, cached_workflow=cached_workflow, use_cached_workflow=use_cached_workflow)
         db.add(task)
         db.commit()
         db.refresh(task)
@@ -312,9 +316,9 @@ def get_run_actions(task_run_id: int, step_number: int) -> List[RunAction]:
         db.close()
 
 
-def create_task_and_task_run(prompt: str, model: str, provider: str, webhook_url: Optional[str] = None, json_schema: Optional[str] = None) -> Dict[str, Any]:
+def create_task_and_task_run(prompt: str, model: str, provider: str, webhook_url: Optional[str] = None, json_schema: Optional[str] = None, cached_workflow: Optional[Dict[str, Any]] = None, use_cached_workflow: bool = False) -> Dict[str, Any]:
     """Create a task and an associated task run by reusing existing functions"""
-    task = create_task(prompt=prompt, model=model, provider=provider, webhook_url=webhook_url, json_schema=json_schema)
+    task = create_task(prompt=prompt, model=model, provider=provider, webhook_url=webhook_url, json_schema=json_schema, cached_workflow=cached_workflow, use_cached_workflow=use_cached_workflow)
     task_run = create_task_run(
         task_id=task.id,
         prompt=prompt,
@@ -323,7 +327,7 @@ def create_task_and_task_run(prompt: str, model: str, provider: str, webhook_url
         webhook_url=webhook_url,
         json_schema=json_schema
     )
-    
+
     return {
         "task": task,
         "task_run": task_run

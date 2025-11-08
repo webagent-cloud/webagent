@@ -1,11 +1,13 @@
 from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from webagent.agent_service import execute_agent, AgentRequest, AgentResponse, AsyncAgentResponse
+from webagent.agent_service import execute_agent, AgentRequest, AgentResponse, AsyncAgentResponse, TaskRunRequest
 from webagent.task_repository import (
     create_task_and_task_run,
+    create_task_run,
     get_all_tasks,
     get_task,
 )
+from webagent.models import ProviderEnum
 from dotenv import load_dotenv
 import logging
 
@@ -53,6 +55,76 @@ async def get_task_by_id(task_id: int):
     except Exception as e:
         logger.error(f"Error while fetching task {task_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Error while fetching task")
+
+
+@app.post("/tasks/{task_id}/run", response_model=AgentResponse | AsyncAgentResponse)
+async def run_task(task_id: int, request: TaskRunRequest, background_tasks: BackgroundTasks):
+    """Run an existing task with optional parameter overrides"""
+    try:
+        # Get the existing task
+        task = get_task(task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail=f"Task with ID {task_id} not found")
+
+        # Merge task parameters with request overrides
+        merged_prompt = request.task if request.task is not None else task.prompt
+        merged_model = request.model if request.model is not None else task.model
+        merged_provider = request.provider if request.provider is not None else ProviderEnum(task.provider)
+        merged_webhook_url = request.webhook_url if request.webhook_url is not None else task.webhook_url
+        merged_json_schema = request.json_schema_str if request.json_schema is not None else task.json_schema
+        merged_wait_for_completion = request.wait_for_completion if request.wait_for_completion is not None else True
+
+        # Create a new task run with merged parameters
+        task_run = create_task_run(
+            task_id=task_id,
+            prompt=merged_prompt,
+            model=merged_model,
+            provider=merged_provider.value,
+            webhook_url=merged_webhook_url,
+            json_schema=merged_json_schema
+        )
+        task_run_id = task_run.id
+
+        # Build AgentRequest with merged parameters
+        # Only include json_schema if it's not None
+        agent_request_params = {
+            "task": merged_prompt,
+            "model": merged_model,
+            "provider": merged_provider,
+            "wait_for_completion": merged_wait_for_completion,
+            "webhook_url": merged_webhook_url,
+        }
+
+        # Add json_schema only if we have a value
+        merged_json_schema_for_request = request.json_schema if request.json_schema is not None else (task.json_schema if task.json_schema else None)
+        if merged_json_schema_for_request is not None:
+            agent_request_params["json_schema"] = merged_json_schema_for_request
+
+        agent_request = AgentRequest(**agent_request_params)
+
+        # If wait_for_completion is False, execute in background and return immediately
+        if not merged_wait_for_completion:
+            logger.info(f"Running task ID: {task_id} with task run ID: {task_run_id}")
+
+            # Create a wrapper function to await the async execute_agent function
+            async def execute_agent_wrapper(req, t_id, tr_id):
+                await execute_agent(req, t_id, tr_id)
+
+            background_tasks.add_task(execute_agent_wrapper, agent_request, task_id, task_run_id)
+
+            logger.info(f"Added task to background: {merged_prompt}")
+            return AsyncAgentResponse(
+                task_id=task_id,
+                task_run_id=task_run_id
+            )
+
+        # Otherwise, execute synchronously and wait for result
+        return await execute_agent(agent_request, task_id, task_run_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error while running task {task_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error while running task")
 
 
 @app.post("/run", response_model=AgentResponse | AsyncAgentResponse)
