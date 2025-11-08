@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
 from webagent.agent_service import execute_agent, AgentRequest, AgentResponse, AsyncAgentResponse
 from webagent.task_repository import (
     create_task_and_task_run,
@@ -17,6 +18,15 @@ app = FastAPI(
     title="Webagent API",
     description="API to execute automated tasks on browser using different LLM providers.",
     version="0.1.0"
+)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # Frontend dev servers
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.get("/tasks")
