@@ -117,6 +117,13 @@ async def run_task(task_id: int, request: TaskRunRequest, background_tasks: Back
         agent_request.use_cached_workflow = request.use_cached_workflow if request.use_cached_workflow is not None else task.use_cached_workflow
         agent_request.cached_workflow = task.cached_workflow
 
+        # Validate that cached_workflow exists if use_cached_workflow is True
+        if agent_request.use_cached_workflow and not agent_request.cached_workflow:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot use cached workflow: Task {task_id} does not have a cached workflow. Please create one first by calling POST /api/runs/{{run_id}}/set-as-cached-workflow"
+            )
+
         # If wait_for_completion is False, execute in background and return immediately
         if not merged_wait_for_completion:
             logger.info(f"Running task ID: {task_id} with task run ID: {task_run_id}")
