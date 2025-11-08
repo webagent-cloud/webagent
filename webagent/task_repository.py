@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, ForeignKey, ForeignKeyConstraint, Text, JSON
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm import sessionmaker, relationship, joinedload
 from typing import Optional, List, Dict, Any
 from webagent.models import ProviderEnum
 
@@ -296,6 +296,23 @@ def get_task_run(task_run_id: int) -> Optional[TaskRun]:
     db = SessionLocal()
     try:
         return db.query(TaskRun).filter(TaskRun.id == task_run_id).first()
+    finally:
+        db.close()
+
+
+def get_task_run_with_steps(task_run_id: int) -> Optional[Dict[str, Any]]:
+    """Get a task run by ID with all steps and actions eagerly loaded and converted to dict"""
+    db = SessionLocal()
+    try:
+        task_run = db.query(TaskRun).options(
+            joinedload(TaskRun.steps).joinedload(RunStep.actions)
+        ).filter(TaskRun.id == task_run_id).first()
+
+        if not task_run:
+            return None
+
+        # Convert to dict while session is still open
+        return task_run.to_dict()
     finally:
         db.close()
 

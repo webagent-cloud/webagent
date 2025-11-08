@@ -7,8 +7,11 @@ from webagent.task_repository import (
     create_task_run,
     get_all_tasks,
     get_task,
+    get_task_run_with_steps,
+    update_task,
 )
 from webagent.models import ProviderEnum
+from webagent.workflow_builder_service import build_workflow_from_run
 from dotenv import load_dotenv
 import logging
 import os
@@ -110,6 +113,10 @@ async def run_task(task_id: int, request: TaskRunRequest, background_tasks: Back
 
         agent_request = AgentRequest(**agent_request_params)
 
+        # Set use_cached_workflow from request or task
+        agent_request.use_cached_workflow = request.use_cached_workflow if request.use_cached_workflow is not None else task.use_cached_workflow
+        agent_request.cached_workflow = task.cached_workflow
+
         # If wait_for_completion is False, execute in background and return immediately
         if not merged_wait_for_completion:
             logger.info(f"Running task ID: {task_id} with task run ID: {task_run_id}")
@@ -170,6 +177,57 @@ async def run_agent(request: AgentRequest, background_tasks: BackgroundTasks):
     except Exception as e:
         logger.error(f"Error while executing agent {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error while executing agent")
+
+
+@api_router.post("/runs/{run_id}/set-as-cached-workflow")
+async def set_run_as_cached_workflow(run_id: int):
+    """
+    Extract parameters from a run's prompt and create a templated workflow
+    that can be cached in the related task.
+    """
+    try:
+        # Get the task run with steps eagerly loaded
+        task_run_data = get_task_run_with_steps(run_id)
+        if not task_run_data:
+            raise HTTPException(status_code=404, detail=f"Task run with ID {run_id} not found")
+
+        # Get the related task
+        task = get_task(task_run_data["task_id"])
+        if not task:
+            raise HTTPException(status_code=404, detail=f"Task with ID {task_run_data['task_id']} not found")
+
+        # Build the workflow template
+        logger.info(f"Building workflow from run {run_id}")
+
+        # Steps are already in dict format from get_task_run_with_steps
+        steps_data = task_run_data.get("steps", [])
+
+        workflow_template = await build_workflow_from_run(
+            task_prompt=task_run_data["prompt"],
+            steps=steps_data
+        )
+
+        # Update the task with the cached workflow
+        workflow_dict = workflow_template.to_dict()
+        update_task(task.id, {
+            "cached_workflow": workflow_dict,
+            "use_cached_workflow": True
+        })
+
+        logger.info(f"Successfully cached workflow for task {task.id} from run {run_id}")
+
+        return {
+            "success": True,
+            "workflow": workflow_dict,
+            "message": f"Successfully extracted {len(workflow_template.parameters)} parameter(s) and created workflow template",
+            "task_id": task.id
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error while building workflow from run {run_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error while building workflow: {str(e)}")
 
 
 # Include the API router in the app
