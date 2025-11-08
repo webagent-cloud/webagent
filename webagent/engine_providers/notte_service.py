@@ -14,11 +14,11 @@ class NotteService(EngineService):
         """
         Execute the agent using Notte with Session and Agent.
         """
-        logger.info(f"Starting Notte agent with task: {request.task}")
-        
+        logger.info(f"Starting Notte agent with task: {request.prompt}")
+
         with notte.Session(cdp_url=session_response["cdp_url"]) as session:
             agent = notte.Agent(session=session, reasoning_model='gemini/gemini-2.5-flash', max_steps=30)
-            response = agent.run(task=request.task)
+            response = agent.run(task=request.prompt)
 
             # Access the trajectory from the response  
             trajectory = response.trajectory

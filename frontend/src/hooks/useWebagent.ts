@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { API_BASE_URL } from '../config/api'
 
 export interface TaskRequest {
-  task: string
+  prompt: string
   model: string
   provider: string
   wait_for_completion?: boolean

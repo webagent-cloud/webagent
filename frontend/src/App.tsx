@@ -4,7 +4,7 @@ import { useTasks } from './hooks/useTasks'
 import logo from './assets/logo.png'
 
 interface TaskFormData {
-  task: string
+  prompt: string
   model: string
   provider: string
 }
@@ -13,7 +13,7 @@ function App() {
   const { runTask, loading, result, error } = useWebagent()
   const { tasks, loading: tasksLoading, error: tasksError, refreshTasks } = useTasks()
   const [formData, setFormData] = useState<TaskFormData>({
-    task: '',
+    prompt: '',
     model: 'gpt-4o',
     provider: 'openai'
   })
@@ -49,13 +49,13 @@ function App() {
           <form onSubmit={handleSubmit} className="mb-4">
             {/* Task Description */}
             <div className="mb-6 text-left">
-              <label htmlFor="task" className="block mb-2 font-semibold">
+              <label htmlFor="prompt" className="block mb-2 font-semibold">
                 Task Description:
               </label>
               <textarea
-                id="task"
-                value={formData.task}
-                onChange={(e) => setFormData({ ...formData, task: e.target.value })}
+                id="prompt"
+                value={formData.prompt}
+                onChange={(e) => setFormData({ ...formData, prompt: e.target.value })}
                 placeholder="e.g., go to https://example.com and get the page title"
                 required
                 rows={4}
@@ -102,7 +102,7 @@ function App() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading || !formData.task}
+              disabled={loading || !formData.prompt}
               className="w-full px-3 py-2 bg-[#646cff] text-white border-none rounded text-base font-semibold cursor-pointer transition-colors duration-300 hover:bg-[#535bf2] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Running Task...' : 'Run Task'}

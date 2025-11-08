@@ -73,15 +73,15 @@ class BrowseruseService(EngineService):
         """
         Execute the agent using browser-use with Agent, Browser, and Controller.
         """
-        logger.info(f"Starting browser-use agent with task: {request.task}")
-        
+        logger.info(f"Starting browser-use agent with task: {request.prompt}")
+
         controller = Controller(output_model=request.json_schema_model)
         browser = Browser(
             cdp_url=session_response["cdp_url"],
         )
 
         agent = Agent(
-            task=request.task,
+            task=request.prompt,
             llm=llm,
             browser=browser,
             controller=controller,

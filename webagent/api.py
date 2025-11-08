@@ -73,10 +73,11 @@ async def run_task(task_id: int, request: TaskRunRequest, background_tasks: Back
             raise HTTPException(status_code=404, detail=f"Task with ID {task_id} not found")
 
         # Merge task parameters with request overrides
-        merged_prompt = request.task if request.task is not None else task.prompt
+        merged_prompt = request.prompt if request.prompt is not None else task.prompt
         merged_model = request.model if request.model is not None else task.model
         merged_provider = request.provider if request.provider is not None else ProviderEnum(task.provider)
         merged_webhook_url = request.webhook_url if request.webhook_url is not None else task.webhook_url
+        merged_response_format = request.response_format if request.response_format is not None else task.response_format
         merged_json_schema = request.json_schema_str if request.json_schema is not None else task.json_schema
         merged_wait_for_completion = request.wait_for_completion if request.wait_for_completion is not None else True
 
@@ -87,6 +88,7 @@ async def run_task(task_id: int, request: TaskRunRequest, background_tasks: Back
             model=merged_model,
             provider=merged_provider.value,
             webhook_url=merged_webhook_url,
+            response_format=merged_response_format,
             json_schema=merged_json_schema
         )
         task_run_id = task_run.id
@@ -94,7 +96,7 @@ async def run_task(task_id: int, request: TaskRunRequest, background_tasks: Back
         # Build AgentRequest with merged parameters
         # Only include json_schema if it's not None
         agent_request_params = {
-            "task": merged_prompt,
+            "prompt": merged_prompt,
             "model": merged_model,
             "provider": merged_provider,
             "wait_for_completion": merged_wait_for_completion,
@@ -137,10 +139,11 @@ async def run_task(task_id: int, request: TaskRunRequest, background_tasks: Back
 async def run_agent(request: AgentRequest, background_tasks: BackgroundTasks):
     try:
         result = create_task_and_task_run(
-            prompt=request.task,
+            prompt=request.prompt,
             model=request.model,
             provider=request.provider.value,
             webhook_url=request.webhook_url,
+            response_format=request.response_format,
             json_schema=request.json_schema_str
         )
         task_id = result["task"].id
@@ -156,7 +159,7 @@ async def run_agent(request: AgentRequest, background_tasks: BackgroundTasks):
 
             background_tasks.add_task(execute_agent_wrapper, request, task_id, task_run_id)
 
-            logger.info(f"Added task to background: {request.task}")
+            logger.info(f"Added task to background: {request.prompt}")
             return AsyncAgentResponse(
                 task_id=task_id,
                 task_run_id=task_run_id

@@ -22,7 +22,7 @@ from webagent.engine_providers.engine_service_selector import get_engine_service
 logger = logging.getLogger(__name__)
 
 class AgentRequest(BaseModel):
-    task: str = Field(..., min_length=3, description="The task to be performed by the agent")
+    prompt: str = Field(..., min_length=3, description="The task to be performed by the agent")
     model: str = "gpt-4o"
     provider: ProviderEnum = ProviderEnum.openai
     wait_for_completion: Optional[bool] = Field(
@@ -30,6 +30,7 @@ class AgentRequest(BaseModel):
         description="Whether to wait for the task to complete before returning the response. If false, the task will be executed in the background and the response will contain only the task ID."
     )
     webhook_url: Optional[str] = Field(None, description="URL to send webhook notification when task is complete")
+    response_format: Optional[str] = Field('text', description="Whether to return the result as text or JSON")
     json_schema: Optional[str | dict] = Field(None, description="The JSON schema for the task result")
     @field_validator("json_schema")
     @classmethod
@@ -71,7 +72,7 @@ class AgentRequest(BaseModel):
 
 class TaskRunRequest(BaseModel):
     """Request model for running an existing task with optional parameter overrides"""
-    task: Optional[str] = Field(None, min_length=3, description="Override task prompt")
+    prompt: Optional[str] = Field(None, min_length=3, description="Override task prompt")
     model: Optional[str] = Field(None, description="Override model")
     provider: Optional[ProviderEnum] = Field(None, description="Override provider")
     wait_for_completion: Optional[bool] = Field(
@@ -79,6 +80,7 @@ class TaskRunRequest(BaseModel):
         description="Whether to wait for the task to complete before returning the response. If false, the task will be executed in the background and the response will contain only the task ID."
     )
     webhook_url: Optional[str] = Field(None, description="Override webhook URL")
+    response_format: Optional[str] = Field(None, description="Whether to return the result as text or JSON")
     json_schema: Optional[str | dict] = Field(None, description="Override JSON schema for the task result")
 
     @field_validator("json_schema")
@@ -145,7 +147,7 @@ async def execute_agent(request: AgentRequest, task_id=None, task_run_id=None):
     Execute the agent with the given request parameters.
     This function is used by both synchronous and asynchronous routes.
     """
-    logger.info(f"Starting agent with task: {request.task}, provider: {request.provider}, model: {request.model}")
+    logger.info(f"Starting agent with task: {request.prompt}, provider: {request.provider}, model: {request.model}")
     
     llm = get_llm(request.provider, request.model)
     browser_service = get_browser_service()
