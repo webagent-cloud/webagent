@@ -5,18 +5,18 @@ import logo from './assets/logo.png'
 
 interface TaskFormData {
   prompt: string
-  model: string
-  provider: string
+  webhook_url?: string
+  response_format?: string
+  json_schema?: string
 }
 
 function App() {
   const { runTask, loading, result, error } = useWebagent()
   const { tasks, loading: tasksLoading, error: tasksError, refreshTasks } = useTasks()
   const [formData, setFormData] = useState<TaskFormData>({
-    prompt: '',
-    model: 'o3',
-    provider: 'openai'
+    prompt: ''
   })
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   // Refresh task list when a new task completes
   useEffect(() => {
@@ -34,14 +34,17 @@ function App() {
   }
 
   return (
-    <div className="max-w-[1600px] mx-auto px-8 py-8">
-      {/* Logo */}
-      <div className="text-center mb-8">
-        <img src={logo} alt="Webagent" className="max-w-[300px] w-full h-auto mx-auto" />
-      </div>
+    <div className="min-h-screen flex flex-col">
+      {/* Header */}
+      <header className="w-full bg-white/5 border-b border-white/10 py-4 px-4">
+        <div className="max-w-[1600px] mx-auto flex items-center justify-center">
+          <img src={logo} alt="Webagent" className="max-w-[100px] w-full h-auto" />
+        </div>
+      </header>
 
-      {/* Two Column Layout */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 items-start">
+      {/* Main Content - Centered Single Column Layout */}
+      <main className="flex-1 flex flex-col items-center justify-start px-4 py-8">
+        <div className="w-full max-w-[800px] flex flex-col gap-8">
         {/* Create New Task Block */}
         <div className="bg-white/5 p-8 rounded-lg">
           <h2 className="mt-0 mb-6 text-[1.75rem] text-[#646cff]">Create New Task</h2>
@@ -63,41 +66,74 @@ function App() {
               />
             </div>
 
-            {/* Provider and Model Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div className="text-left">
-                <label htmlFor="provider" className="block mb-2 font-semibold">
-                  Provider:
-                </label>
-                <select
-                  id="provider"
-                  value={formData.provider}
-                  onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
-                  className="w-full px-3 py-2 border border-white/20 rounded bg-black/20 text-inherit font-inherit text-base focus:outline-none focus:border-[#646cff]"
-                >
-                  <option value="openai">OpenAI</option>
-                  <option value="anthropic">Anthropic</option>
-                  <option value="google">Google</option>
-                  <option value="groq">Groq</option>
-                  <option value="deepseek">DeepSeek</option>
-                </select>
-              </div>
-
-              <div className="text-left">
-                <label htmlFor="model" className="block mb-2 font-semibold">
-                  Model:
-                </label>
-                <input
-                  type="text"
-                  id="model"
-                  value={formData.model}
-                  onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                  placeholder="e.g., o3"
-                  required
-                  className="w-full px-3 py-2 border border-white/20 rounded bg-black/20 text-inherit font-inherit text-base focus:outline-none focus:border-[#646cff]"
-                />
-              </div>
+            {/* Advanced Parameters Toggle */}
+            <div className="mb-6">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="flex items-center gap-2 text-[#646cff] hover:text-[#535bf2] transition-colors duration-300 font-semibold"
+              >
+                <span>{showAdvanced ? '▼' : '▶'}</span>
+                <span>Advanced Parameters</span>
+              </button>
             </div>
+
+            {/* Advanced Parameters Section */}
+            {showAdvanced && (
+              <div className="mb-6 space-y-4 p-4 border border-white/10 rounded bg-black/10">
+                {/* Response Format */}
+                <div className="text-left">
+                  <label htmlFor="response_format" className="block mb-2 font-semibold">
+                    Response Format:
+                  </label>
+                  <select
+                    id="response_format"
+                    value={formData.response_format || 'text'}
+                    onChange={(e) => setFormData({ ...formData, response_format: e.target.value })}
+                    className="w-full px-3 py-2 border border-white/20 rounded bg-black/20 text-inherit font-inherit text-base focus:outline-none focus:border-[#646cff]"
+                  >
+                    <option value="text">Text</option>
+                    <option value="json">JSON</option>
+                  </select>
+                </div>
+
+                {/* JSON Schema */}
+                <div className="text-left">
+                  <label htmlFor="json_schema" className="block mb-2 font-semibold">
+                    JSON Schema:
+                  </label>
+                  <textarea
+                    id="json_schema"
+                    value={formData.json_schema || ''}
+                    onChange={(e) => setFormData({ ...formData, json_schema: e.target.value })}
+                    placeholder='{"name": "schema_name", "schema": {"type": "object", "properties": {...}}}'
+                    rows={6}
+                    className="w-full px-3 py-2 border border-white/20 rounded bg-black/20 text-inherit font-mono text-sm resize-y focus:outline-none focus:border-[#646cff]"
+                  />
+                  <p className="text-xs text-white/50 mt-1">
+                    Optional JSON Schema Draft 7 for structured output
+                  </p>
+                </div>
+
+                {/* Webhook URL */}
+                <div className="text-left">
+                  <label htmlFor="webhook_url" className="block mb-2 font-semibold">
+                    Webhook URL:
+                  </label>
+                  <input
+                    type="url"
+                    id="webhook_url"
+                    value={formData.webhook_url || ''}
+                    onChange={(e) => setFormData({ ...formData, webhook_url: e.target.value })}
+                    placeholder="https://your-webhook-endpoint.com/callback"
+                    className="w-full px-3 py-2 border border-white/20 rounded bg-black/20 text-inherit font-inherit text-base focus:outline-none focus:border-[#646cff]"
+                  />
+                  <p className="text-xs text-white/50 mt-1">
+                    Optional URL to receive webhook notification when task completes
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Submit Button */}
             <button
@@ -222,7 +258,8 @@ function App() {
             </div>
           )}
         </div>
-      </div>
+        </div>
+      </main>
     </div>
   )
 }

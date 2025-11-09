@@ -3,9 +3,10 @@ import { API_BASE_URL } from '../config/api'
 
 export interface TaskRequest {
   prompt: string
-  model: string
-  provider: string
   wait_for_completion?: boolean
+  webhook_url?: string
+  response_format?: string
+  json_schema?: string
 }
 
 export interface TaskResult {
