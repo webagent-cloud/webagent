@@ -7,7 +7,7 @@
 Try it yourself:
 
 ```
-curl -X POST http://localhost:3000/run \
+curl -X POST http://localhost:3000/runs \
   -H "Content-Type: application/json" \
   -d '{
     "task": "Go to https://webagent.cloud and explain what the platform does."
@@ -113,7 +113,7 @@ Once the server is started, you can access the interactive API documentation at:
 
 ### Execute a task with the agent
 
-**Endpoint**: `POST /run`
+**Endpoint**: `POST /runs`
 
 **Request body**:
 ```json

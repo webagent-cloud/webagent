@@ -153,7 +153,7 @@ async def update_task_by_id(task_id: int, request: TaskUpdateRequest):
         raise HTTPException(status_code=500, detail=f"Error while updating task: {str(e)}")
 
 
-@api_router.post("/tasks/{task_id}/run", response_model=AgentResponse | AsyncAgentResponse)
+@api_router.post("/tasks/{task_id}/runs", response_model=AgentResponse | AsyncAgentResponse)
 async def run_task(task_id: int, request: TaskRunRequest, background_tasks: BackgroundTasks):
     """Run an existing task with optional parameter overrides"""
     try:
@@ -236,7 +236,7 @@ async def run_task(task_id: int, request: TaskRunRequest, background_tasks: Back
         raise HTTPException(status_code=500, detail=f"Error while running task")
 
 
-@api_router.post("/run", response_model=AgentResponse | AsyncAgentResponse)
+@api_router.post("/runs", response_model=AgentResponse | AsyncAgentResponse)
 async def run_agent(request: AgentRequest, background_tasks: BackgroundTasks):
     try:
         result = create_task_and_task_run(

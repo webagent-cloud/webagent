@@ -252,6 +252,15 @@ function App() {
                       >
                         Edit
                       </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(`/tasks/${task.id}/runs`)
+                        }}
+                        className="text-xs px-3 py-1 bg-[#646cff]/20 text-[#646cff] border border-[#646cff] rounded hover:bg-[#646cff]/30 transition-colors duration-200"
+                      >
+                        Runs
+                      </button>
                     </div>
                     {task.status && (
                       <span

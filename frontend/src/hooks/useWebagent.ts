@@ -35,7 +35,7 @@ export const useWebagent = (): UseWebagentReturn => {
     setResult(null)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/run`, {
+      const response = await fetch(`${API_BASE_URL}/runs`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
