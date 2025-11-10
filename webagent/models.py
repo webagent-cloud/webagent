@@ -34,3 +34,12 @@ class HistoryItem(BaseModel):
     """
     description: Optional[str] = Field(None, description="Description of the step")
     actions: Optional[list[Action]] = Field(None, description="List of actions taken in this step")
+
+class LightTaskRun(BaseModel):
+    """
+    Lightweight representation of a task run
+    """
+    id: int = Field(..., description="Task run ID")
+    description: str = Field(..., description="Task run description (prompt)")
+    is_done: bool = Field(..., description="Whether the task run is completed")
+    is_successful: Optional[bool] = Field(None, description="Whether the task run was successful")

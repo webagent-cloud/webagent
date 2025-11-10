@@ -338,6 +338,15 @@ def get_run_actions(task_run_id: int, step_number: int) -> List[RunAction]:
         db.close()
 
 
+def get_task_runs(task_id: int) -> List[TaskRun]:
+    """Get all task runs for a specific task"""
+    db = SessionLocal()
+    try:
+        return db.query(TaskRun).filter(TaskRun.task_id == task_id).order_by(TaskRun.id.desc()).all()
+    finally:
+        db.close()
+
+
 def create_task_and_task_run(prompt: str, model: str, provider: str, webhook_url: Optional[str] = None, response_format: Optional[str] = 'text', json_schema: Optional[str] = None, cached_workflow: Optional[Dict[str, Any]] = None, use_cached_workflow: bool = False) -> Dict[str, Any]:
     """Create a task and an associated task run by reusing existing functions"""
     task = create_task(prompt=prompt, model=model, provider=provider, webhook_url=webhook_url, response_format=response_format, json_schema=json_schema, cached_workflow=cached_workflow, use_cached_workflow=use_cached_workflow)

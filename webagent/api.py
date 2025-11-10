@@ -10,9 +10,10 @@ from webagent.task_repository import (
     get_all_tasks,
     get_task,
     get_task_run_with_steps,
+    get_task_runs,
     update_task,
 )
-from webagent.models import ProviderEnum
+from webagent.models import ProviderEnum, LightTaskRun
 from webagent.workflow_builder_service import build_workflow_from_run
 from dotenv import load_dotenv
 import logging
@@ -66,6 +67,37 @@ async def get_task_by_id(task_id: int):
     except Exception as e:
         logger.error(f"Error while fetching task {task_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Error while fetching task")
+
+
+@api_router.get("/tasks/{task_id}/runs", response_model=list[LightTaskRun])
+async def get_runs_for_task(task_id: int):
+    """Get all runs for a specific task (lightweight version)"""
+    try:
+        # First check if the task exists
+        task = get_task(task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail=f"Task with ID {task_id} not found")
+
+        # Get all runs for this task
+        runs = get_task_runs(task_id)
+
+        # Convert to lightweight format
+        light_runs = [
+            LightTaskRun(
+                id=run.id,
+                description=run.prompt,
+                is_done=run.is_done,
+                is_successful=run.is_successful
+            )
+            for run in runs
+        ]
+
+        return light_runs
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error while fetching runs for task {task_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error while fetching runs")
 
 
 class TaskUpdateRequest(BaseModel):
@@ -239,6 +271,23 @@ async def run_agent(request: AgentRequest, background_tasks: BackgroundTasks):
     except Exception as e:
         logger.error(f"Error while executing agent {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error while executing agent")
+
+
+@api_router.get("/runs/{run_id}")
+async def get_run_by_id(run_id: int):
+    """Get a run by ID with all details, steps, and actions"""
+    try:
+        # Get the task run with steps and actions eagerly loaded
+        task_run_data = get_task_run_with_steps(run_id)
+        if not task_run_data:
+            raise HTTPException(status_code=404, detail=f"Task run with ID {run_id} not found")
+
+        return task_run_data
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error while fetching run {run_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error while fetching run")
 
 
 @api_router.post("/runs/{run_id}/set-as-cached-workflow")
