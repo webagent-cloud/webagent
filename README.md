@@ -1,4 +1,6 @@
-# Webagent
+<div align="center">
+  <img src="frontend/src/assets/logo.png" alt="WebAgent Logo" width="200"/>
+</div>
 
 🚀 Automate repetitive browser tasks!
 

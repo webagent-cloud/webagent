@@ -1,6 +1,4 @@
-<div align="center">
-  <img src="src/assets/logo.png" alt="WebAgent Logo" width="200"/>
-</div>
+Webagent
 
 # React + TypeScript + Vite
 
