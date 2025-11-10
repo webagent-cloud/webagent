@@ -1,6 +1,8 @@
 from fastapi import FastAPI, HTTPException, Request, BackgroundTasks, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
+from typing import Optional
 from webagent.agent_service import execute_agent, AgentRequest, AgentResponse, AsyncAgentResponse, TaskRunRequest
 from webagent.task_repository import (
     create_task_and_task_run,
@@ -64,6 +66,59 @@ async def get_task_by_id(task_id: int):
     except Exception as e:
         logger.error(f"Error while fetching task {task_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Error while fetching task")
+
+
+class TaskUpdateRequest(BaseModel):
+    """Request model for updating a task"""
+    prompt: Optional[str] = Field(None, min_length=3, description="The task prompt")
+    model: Optional[str] = Field(None, description="The model to use")
+    provider: Optional[ProviderEnum] = Field(None, description="The provider to use")
+    webhook_url: Optional[str] = Field(None, description="Webhook URL for notifications")
+    response_format: Optional[str] = Field(None, description="Response format (text or json)")
+    json_schema: Optional[str] = Field(None, description="JSON schema for structured output")
+    cached_workflow: Optional[dict] = Field(None, description="Cached workflow definition")
+    use_cached_workflow: Optional[bool] = Field(None, description="Whether to use cached workflow")
+
+
+@api_router.put("/tasks/{task_id}")
+async def update_task_by_id(task_id: int, request: TaskUpdateRequest):
+    """Update a task by ID"""
+    try:
+        # Get the existing task
+        task = get_task(task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail=f"Task with ID {task_id} not found")
+
+        # Build update data from request
+        update_data = {}
+        if request.prompt is not None:
+            update_data["prompt"] = request.prompt
+        if request.model is not None:
+            update_data["model"] = request.model
+        if request.provider is not None:
+            update_data["provider"] = request.provider.value
+        if request.webhook_url is not None:
+            update_data["webhook_url"] = request.webhook_url
+        if request.response_format is not None:
+            update_data["response_format"] = request.response_format
+        if request.json_schema is not None:
+            update_data["json_schema"] = request.json_schema
+        if request.cached_workflow is not None:
+            update_data["cached_workflow"] = request.cached_workflow
+        if request.use_cached_workflow is not None:
+            update_data["use_cached_workflow"] = request.use_cached_workflow
+
+        # Update the task
+        updated_task = update_task(task_id, update_data)
+        if not updated_task:
+            raise HTTPException(status_code=404, detail=f"Failed to update task {task_id}")
+
+        return updated_task.to_dict()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error while updating task {task_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error while updating task: {str(e)}")
 
 
 @api_router.post("/tasks/{task_id}/run", response_model=AgentResponse | AsyncAgentResponse)

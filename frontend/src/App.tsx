@@ -1,4 +1,5 @@
 import { useState, type FormEvent, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useWebagent } from './hooks/useWebagent'
 import { useTasks } from './hooks/useTasks'
 import logo from './assets/logo.png'
@@ -11,6 +12,7 @@ interface TaskFormData {
 }
 
 function App() {
+  const navigate = useNavigate()
   const { runTask, loading, result, error } = useWebagent()
   const { tasks, loading: tasksLoading, error: tasksError, refreshTasks } = useTasks()
   const [formData, setFormData] = useState<TaskFormData>({
@@ -97,23 +99,25 @@ function App() {
                   </select>
                 </div>
 
-                {/* JSON Schema */}
-                <div className="text-left">
-                  <label htmlFor="json_schema" className="block mb-2 font-semibold">
-                    JSON Schema:
-                  </label>
-                  <textarea
-                    id="json_schema"
-                    value={formData.json_schema || ''}
-                    onChange={(e) => setFormData({ ...formData, json_schema: e.target.value })}
-                    placeholder='{"name": "schema_name", "schema": {"type": "object", "properties": {...}}}'
-                    rows={6}
-                    className="w-full px-3 py-2 border border-white/20 rounded bg-black/20 text-inherit font-mono text-sm resize-y focus:outline-none focus:border-[#646cff]"
-                  />
-                  <p className="text-xs text-white/50 mt-1">
-                    Optional JSON Schema Draft 7 for structured output
-                  </p>
-                </div>
+                {/* JSON Schema - Only show when response format is JSON */}
+                {formData.response_format === 'json' && (
+                  <div className="text-left">
+                    <label htmlFor="json_schema" className="block mb-2 font-semibold">
+                      JSON Schema:
+                    </label>
+                    <textarea
+                      id="json_schema"
+                      value={formData.json_schema || ''}
+                      onChange={(e) => setFormData({ ...formData, json_schema: e.target.value })}
+                      placeholder='{"name": "schema_name", "schema": {"type": "object", "properties": {...}}}'
+                      rows={6}
+                      className="w-full px-3 py-2 border border-white/20 rounded bg-black/20 text-inherit font-mono text-sm resize-y focus:outline-none focus:border-[#646cff]"
+                    />
+                    <p className="text-xs text-white/50 mt-1">
+                      Optional JSON Schema Draft 7 for structured output
+                    </p>
+                  </div>
+                )}
 
                 {/* Webhook URL */}
                 <div className="text-left">
@@ -217,7 +221,8 @@ function App() {
               {tasks.map((task) => (
                 <div
                   key={task.id}
-                  className="bg-black/20 p-4 rounded-md border border-white/10 transition-all duration-200 hover:bg-black/30 hover:border-[#646cff]/30"
+                  onClick={() => navigate(`/tasks/${task.id}`)}
+                  className="bg-black/20 p-4 rounded-md border border-white/10 transition-all duration-200 hover:bg-black/30 hover:border-[#646cff]/30 cursor-pointer"
                 >
                   {/* Task Header */}
                   <div className="flex justify-between items-center mb-3">
@@ -234,9 +239,20 @@ function App() {
 
                   {/* Task Footer */}
                   <div className="flex justify-between items-center mt-3 pt-3 border-t border-white/10">
-                    <span className="text-xs text-white/50">
-                      {new Date(task.created_at).toLocaleString()}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-white/50">
+                        {new Date(task.created_at).toLocaleString()}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(`/tasks/${task.id}`)
+                        }}
+                        className="text-xs px-3 py-1 bg-[#646cff]/20 text-[#646cff] border border-[#646cff] rounded hover:bg-[#646cff]/30 transition-colors duration-200"
+                      >
+                        Edit
+                      </button>
+                    </div>
                     {task.status && (
                       <span
                         className={`px-3 py-1 rounded-full text-[0.75rem] font-semibold uppercase ${
