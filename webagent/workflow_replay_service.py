@@ -329,53 +329,31 @@ async def execute_action(page: Page, action_name: str, params: Dict[str, Any]):
 
     # Page Interaction
     elif action_name == "click":
-        index = params.get("index")
         xpath = params.get("xpath")
 
         if xpath:
-            # Use xpath if available
-            await page.click(f"xpath={xpath}")
-        elif index is not None:
-            # Use index - would need browser state to resolve
-            # For now, try common selector patterns
-            logger.warning(f"Click by index {index} - xpath not available, may fail")
-            # Try to find element by index in the page
-            selector = f"[data-index='{index}']"
-            await page.click(selector)
+            await page.click(f"xpath={xpath}", timeout=10000)
+
 
     elif action_name == "input":
-        index = params.get("index")
         text = params.get("text", "")
         clear = params.get("clear", True)
         xpath = params.get("xpath")
 
         if xpath:
             if clear:
-                await page.fill(f"xpath={xpath}", text)
+                await page.fill(f"xpath={xpath}", text, timeout=10000)
             else:
                 # If not clearing, focus and type
-                await page.focus(f"xpath={xpath}")
-                await page.keyboard.type(text)
-        elif index is not None:
-            logger.warning(f"Input by index {index} - xpath not available, may fail")
-            selector = f"[data-index='{index}']"
-            if clear:
-                await page.fill(selector, text)
-            else:
-                await page.focus(selector)
+                await page.focus(f"xpath={xpath}", timeout=10000)
                 await page.keyboard.type(text)
 
     elif action_name == "upload_file":
-        index = params.get("index")
         path = params.get("path")
         xpath = params.get("xpath")
 
         if xpath and path:
-            await page.set_input_files(f"xpath={xpath}", path)
-        elif index is not None and path:
-            logger.warning(f"Upload file by index {index} - xpath not available, may fail")
-            selector = f"[data-index='{index}']"
-            await page.set_input_files(selector, path)
+            await page.set_input_files(f"xpath={xpath}", path, timeout=10000)
 
     elif action_name == "scroll":
         down = params.get("down", True)
@@ -426,16 +404,11 @@ async def execute_action(page: Page, action_name: str, params: Dict[str, Any]):
         logger.info("Skipping dropdown_options (read-only)")
 
     elif action_name == "select_dropdown":
-        index = params.get("index")
         text = params.get("text", "")
         xpath = params.get("xpath")
 
         if xpath:
-            await page.select_option(f"xpath={xpath}", label=text)
-        elif index is not None:
-            logger.warning(f"Select dropdown by index {index} - xpath not available, may fail")
-            selector = f"[data-index='{index}']"
-            await page.select_option(selector, label=text)
+            await page.select_option(f"xpath={xpath}", label=text, timeout=10000)
 
     # Content Extraction
     elif action_name == "extract":
