@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import ParameterModal from './workflow-modals/ParameterModal'
 import StepModal from './workflow-modals/StepModal'
 import ActionModal from './workflow-modals/ActionModal'
+import { API_BASE_URL } from '../config/api'
 
 interface WorkflowParameter {
   name: string
@@ -33,11 +34,20 @@ interface Workflow {
   steps: WorkflowStep[]
 }
 
+interface TaskRun {
+  id: number
+  description: string
+  is_done: boolean
+  is_successful: boolean | null
+}
+
 interface VisualWorkflowEditorProps {
   workflow: Workflow | null
   onChange: (workflow: Workflow) => void
   onToggle?: (enabled: boolean) => void
   enabled?: boolean
+  taskId?: number
+  onWorkflowCreated?: () => void
 }
 
 const ACTION_ICONS: Record<string, string> = {
@@ -56,8 +66,15 @@ export default function VisualWorkflowEditor({
   onChange,
   onToggle,
   enabled = false,
+  taskId,
+  onWorkflowCreated,
 }: VisualWorkflowEditorProps) {
   const [workflowData, setWorkflowData] = useState<Workflow>(workflow || { parameters: [], steps: [] })
+  const [runs, setRuns] = useState<TaskRun[]>([])
+  const [selectedRunId, setSelectedRunId] = useState<number | null>(null)
+  const [loadingRuns, setLoadingRuns] = useState(false)
+  const [creatingWorkflow, setCreatingWorkflow] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // Modal states
   const [parameterModal, setParameterModal] = useState<{ open: boolean; data: WorkflowParameter | null; index: number | null }>({
@@ -82,12 +99,75 @@ export default function VisualWorkflowEditor({
     actionIndex: null,
   })
 
+  // Fetch runs for this task
+  useEffect(() => {
+    const fetchRuns = async () => {
+      if (!taskId || workflow) return
+
+      try {
+        setLoadingRuns(true)
+        const response = await fetch(`${API_BASE_URL}/tasks/${taskId}/runs`)
+        if (!response.ok) {
+          throw new Error(`Failed to fetch runs: ${response.statusText}`)
+        }
+        const data = await response.json()
+        setRuns(data)
+
+        // Set the latest run as default
+        if (data.length > 0) {
+          setSelectedRunId(data[0].id)
+        }
+      } catch (err) {
+        console.error('Error fetching runs:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load runs')
+      } finally {
+        setLoadingRuns(false)
+      }
+    }
+
+    fetchRuns()
+  }, [taskId, workflow])
+
   // Sync with external workflow changes on mount and when workflow prop changes
   useEffect(() => {
     if (workflow) {
       setWorkflowData(workflow)
     }
   }, [workflow])
+
+  // Create cached workflow from run
+  const handleCreateWorkflow = async () => {
+    if (!selectedRunId) return
+
+    try {
+      setCreatingWorkflow(true)
+      setError(null)
+
+      const response = await fetch(`${API_BASE_URL}/runs/${selectedRunId}/set-as-cached-workflow`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.detail || `Failed to create workflow: ${response.statusText}`)
+      }
+
+      //const result = await response.json()
+
+      // Call the callback to refetch the task and reload the page
+      if (onWorkflowCreated) {
+        onWorkflowCreated()
+      }
+    } catch (err) {
+      console.error('Error creating workflow:', err)
+      setError(err instanceof Error ? err.message : 'Failed to create workflow')
+    } finally {
+      setCreatingWorkflow(false)
+    }
+  }
 
   // Parameter actions
   const addParameter = () => {
@@ -203,15 +283,17 @@ export default function VisualWorkflowEditor({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h3 className="m-0 text-lg font-semibold text-white">Cached Workflow</h3>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={enabled}
-                onChange={(e) => onToggle?.(e.target.checked)}
-                className="w-4 h-4 accent-[#646cff]"
-              />
-              <span className="text-sm text-white/80">Enable cached workflow</span>
-            </label>
+            {workflow !== null && (
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={enabled}
+                  onChange={(e) => onToggle?.(e.target.checked)}
+                  className="w-4 h-4 accent-[#646cff]"
+                />
+                <span className="text-sm text-white/80">Enable cached workflow</span>
+              </label>
+            )}
           </div>
 
           {enabled && (
@@ -383,6 +465,50 @@ export default function VisualWorkflowEditor({
                 </button>
               </div>
             )}
+          </div>
+        ) : workflow === null ? (
+          <div className="h-full flex items-center justify-center">
+            <div className="max-w-md space-y-6">
+              <h3 className="text-white text-xl font-semibold text-center">Create a cached workflow from</h3>
+
+              {loadingRuns ? (
+                <p className="text-white/60 text-center">Loading runs...</p>
+              ) : runs.length === 0 ? (
+                <p className="text-white/60 text-center">No execution runs available. Please run this task first.</p>
+              ) : (
+                <>
+                  <div className="space-y-3">
+                    <label className="block text-sm text-white/80">Select execution run:</label>
+                    <select
+                      value={selectedRunId || ''}
+                      onChange={(e) => setSelectedRunId(Number(e.target.value))}
+                      className="w-full px-4 py-3 border border-white/20 rounded bg-[#2a2a2a] text-white text-sm focus:outline-none focus:border-[#646cff]"
+                    >
+                      {runs.map((run) => (
+                        <option key={run.id} value={run.id}>
+                          Run #{run.id} - {run.description.substring(0, 50)}
+                          {run.description.length > 50 ? '...' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={handleCreateWorkflow}
+                    disabled={!selectedRunId || creatingWorkflow}
+                    className="w-full px-6 py-3 bg-[#646cff] text-white border-none rounded text-sm font-semibold cursor-pointer transition-colors duration-300 hover:bg-[#535bf2] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {creatingWorkflow ? 'Creating...' : 'Create'}
+                  </button>
+
+                  {error && (
+                    <div className="bg-red-500/10 border border-red-500/30 p-3 rounded">
+                      <p className="text-[#ff6b6b] text-sm m-0">{error}</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         ) : (
           <div className="h-full flex items-center justify-center">

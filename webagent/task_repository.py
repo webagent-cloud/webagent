@@ -4,7 +4,8 @@ from sqlalchemy.orm import sessionmaker, relationship, joinedload
 from typing import Optional, List, Dict, Any
 from webagent.models import ProviderEnum
 
-engine = create_engine('sqlite:///tasks.db', echo=True)
+engine = create_engine('sqlite:///tasks.db', echo=False)
+
 Base = declarative_base()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

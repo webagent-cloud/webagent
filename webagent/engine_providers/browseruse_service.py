@@ -18,7 +18,6 @@ def extract_history(history):
     action_result_index = 0
 
     for history_item in history.history:
-        logger.info(f"Processing history_item: {history_item}")
         action_details = []
 
         if history_item.model_output:
@@ -30,8 +29,6 @@ def extract_history(history):
                 # Get action name (the key in the action dict)
                 action_dict = action.model_dump(exclude_none=True)
                 action_name = list(action_dict.keys())[0] if action_dict else 'unknown'
-
-                logger.info(f"Processing action: {action}")
 
                 action_params = action_dict.get(action_name, {})
 

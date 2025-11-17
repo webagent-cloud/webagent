@@ -41,32 +41,33 @@ export default function TaskEdit() {
   })
   const [showAdvanced, setShowAdvanced] = useState(false)
 
-  useEffect(() => {
-    const fetchTask = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/tasks/${id}`)
-        if (!response.ok) {
-          throw new Error(`Failed to fetch task: ${response.statusText}`)
-        }
-        const data = await response.json()
-        setTask(data)
-        setFormData({
-          prompt: data.prompt || '',
-          model: data.model || 'o3',
-          provider: data.provider || 'openai',
-          webhook_url: data.webhook_url || '',
-          response_format: data.response_format || 'text',
-          json_schema: data.json_schema || '',
-          cached_workflow: data.cached_workflow || null,
-          use_cached_workflow: data.use_cached_workflow || false
-        })
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load task')
-      } finally {
-        setLoading(false)
+  const fetchTask = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`${API_BASE_URL}/tasks/${id}`)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch task: ${response.statusText}`)
       }
+      const data = await response.json()
+      setTask(data)
+      setFormData({
+        prompt: data.prompt || '',
+        model: data.model || 'o3',
+        provider: data.provider || 'openai',
+        webhook_url: data.webhook_url || '',
+        response_format: data.response_format || 'text',
+        json_schema: data.json_schema || '',
+        cached_workflow: data.cached_workflow || null,
+        use_cached_workflow: data.use_cached_workflow || false
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load task')
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
     if (id) {
       fetchTask()
     }
@@ -301,6 +302,8 @@ export default function TaskEdit() {
               onChange={(workflow) => setFormData({ ...formData, cached_workflow: workflow })}
               onToggle={(enabled) => setFormData({ ...formData, use_cached_workflow: enabled })}
               enabled={formData.use_cached_workflow || false}
+              taskId={task.id}
+              onWorkflowCreated={fetchTask}
             />
           </div>
     </div>
