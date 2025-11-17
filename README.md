@@ -2,26 +2,37 @@
   <img src="frontend/src/assets/logo.png" alt="WebAgent Logo" width="200"/>
 </div>
 
-🚀 Automate repetitive browser tasks!
+🚀 Build fast and reliable AI browser agents !
 
-Try it yourself:
+Webagent uses AI to build complex browser workflows from simple prompts.
 
 ```
 curl -X POST http://localhost:3000/runs \
   -H "Content-Type: application/json" \
   -d '{
-    "task": "Go to https://webagent.cloud and explain what the platform does."
+    "prompt": "Go to https://webagent.cloud and explain what the platform does."
   }'
 ```
 
-The universal connector for web agents :
-- 🔗 Integrate into any app with our API
+### Fast and reliable.
+
+🚀 Webagent can record and cache browser actions to build parameterized workflows, then replay repetitive tasks without using AI — fast and cost-effective.
+💊 Workflows are self-healing: if a website changes, the workflow falls back to AI.
+
+### Adaptable.
+
+- 🔒 Self-Host on your infrastructure
+- 🔗 Integrate into any app with the API, or n8n, Zapier, Make integrations.
 - 🌐 Multiple LLM compatibility
-- 🔎 Supports multiple Browsers providers
-- 🔒 Host on your infrastructure
+- 🔎 Supports multiple Browsers sources: Local, Steel, Browserbase
+- 🔌 Compatible with multiple AI agent engine : Browser-use, Notte, Stagehand (soon)
+
+
+### And many more !
 - 💽 Store and retrieve results in database
 - 🪝 Get notified of results with webhooks
 - 🗄️ Structure results with JSON Schema
+- 🍪 Reuse sessions and cookies with authentication contexts (soon)
 
 ## Installation
 
@@ -40,12 +51,13 @@ Add your API keys for the provider you want to use to your .env file.
 ```
 OPENAI_API_KEY=
 ANTHROPIC_API_KEY=
-AZURE_ENDPOINT=
-AZURE_OPENAI_API_KEY=
 GEMINI_API_KEY=
-DEEPSEEK_API_KEY=
-GROK_API_KEY=
-NOVITA_API_KEY=
+
+BROWSER_PROVIDER=local # local | browserbase | steel
+# Provide browser provider API keys if needed
+STEEL_API_KEY=****
+BROWSERBASE_PROJECT_ID=******
+BROWSERBASE_API_KEY=******
 ```
 
 4. Run the server
@@ -53,6 +65,8 @@ NOVITA_API_KEY=
 ```bash
 python server.py
 ```
+
+Go on http://localhost:8080 and start automating !
 
 ### Option 2: Docker Installation
 
@@ -82,99 +96,8 @@ The Docker image includes all necessary dependencies, including Playwright for b
 docker-compose up
 ```
 
-## Starting the server
-
-### Local Start
-
-```bash
-python server.py
-```
-
-### Docker Start
-
-```bash
-# Using Docker
-docker run -p 8080:8080 --env-file .env webagent
-
-# Using Docker Compose
-docker-compose up
-```
-
-The server will start at http://localhost:8080
+Go on http://localhost:8080 and start automating !
 
 ## API Documentation
 
-Once the server is started, you can access the interactive API documentation at:
-
-- http://localhost:8080/docs (Swagger UI)
-- http://localhost:8080/redoc (ReDoc)
-
-## Using the API
-
-### Execute a task with the agent
-
-**Endpoint**: `POST /runs`
-
-**Request body**:
-```json
-{
-  "task": "go to this site https://example.com and retrieve the page title",
-  "provider": "openai",
-  "model": "o3"
-}
-```
-
-**Response**:
-```json
-{
-  "history": [
-    {
-      "is_done": true,
-      "success": true,
-      "extracted_content": "Example Domain",
-      "error": null,
-      "include_in_memory": false
-    }
-  ],
-  "result": "Example Domain",
-  "is_done": true,
-  "is_successful": true,
-  "status": "success"
-}
-```
-
-## Example usage with curl
-
-```bash
-# Execute a task
-curl -X 'POST' \
-  'http://localhost:8080/run' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "task": "go to this site https://example.com and retrieve the page title",
-  "model": "o3",
-  "provider": "openai"
-}'
-```
-
-## Example usage with Python
-
-```python
-import requests
-
-# Base URL of the API
-base_url = "http://localhost:8080"
-
-# Execute a task
-response = requests.post(
-    f"{base_url}/run",
-    json={
-        "task": "go to this site https://example.com and retrieve the page title",
-        "model": "o3",
-        "provider": "openai"
-    }
-)
-
-# Print the response
-print(f"Response: {response.json()}")
-```
+The documentation is available at https://docs.webagent.cloud/self-hosted-api-reference/introduction
