@@ -75,6 +75,8 @@ class BrowseruseService(EngineService):
         controller = Controller(output_model=request.json_schema_model)
         browser = Browser(
             cdp_url=session_response["cdp_url"],
+            # user_data_dir="~/.browser-use/test-profile",  
+            # keep_alive=True,
         )
 
         agent = Agent(
@@ -82,12 +84,19 @@ class BrowseruseService(EngineService):
             llm=llm,
             browser=browser,
             controller=controller,
+            calculate_cost=True 
         )
 
         agent_results = await agent.run()
+
+        # Get usage from history
+        logger.error(f"Token usage: {agent_results.usage}")
+
+        # Or get from usage summary
+        usage_summary = await agent.token_cost_service.get_usage_summary()
+        logger.error(f"Usage summary: {usage_summary}")
         logger.info(f"Browser-use agent completed")
         ## log everything under agent_results
-        logger.info(f"Agent raw: {agent_results.history}")
 
         # Extract standard results from browser-use
         final_result = agent_results.final_result()
