@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request, BackgroundTasks, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from typing import Optional
 from webagent.agent_service import execute_agent, AgentRequest, AgentResponse, AsyncAgentResponse, TaskRunRequest
@@ -350,7 +351,35 @@ static_dir = Path(__file__).parent.parent / "frontend" / "dist"
 
 # Check if dist directory exists, if not log a warning
 if static_dir.exists() and static_dir.is_dir():
-    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+    # Mount static files for assets (JS, CSS, images, etc.)
+    app.mount("/assets", StaticFiles(directory=str(static_dir / "assets")), name="assets")
+
+    # Serve specific static files from root
+    @app.get("/favicon.ico")
+    async def favicon():
+        return FileResponse(static_dir / "favicon.ico")
+
+    @app.get("/vite.svg")
+    async def vite_svg():
+        vite_svg_path = static_dir / "vite.svg"
+        if vite_svg_path.exists():
+            return FileResponse(vite_svg_path)
+        raise HTTPException(status_code=404)
+
+    # Catch-all route for SPA - serves index.html for all non-API routes
+    # This MUST be last so it doesn't override API routes
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        # If the path starts with /api, let it fall through to 404
+        if full_path.startswith("api/"):
+            raise HTTPException(status_code=404)
+
+        # For all other routes, serve index.html (SPA fallback)
+        index_path = static_dir / "index.html"
+        if index_path.exists():
+            return FileResponse(index_path)
+        raise HTTPException(status_code=404, detail="Frontend not built")
+
     logger.info(f"Serving static files from {static_dir}")
 else:
     logger.warning(f"Static directory not found at {static_dir}. Frontend will not be served.")
