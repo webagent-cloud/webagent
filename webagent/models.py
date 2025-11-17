@@ -27,6 +27,9 @@ class Action(BaseModel):
     extracted_content: Optional[str] = Field(None, description="Content extracted from the action")
     error: Optional[str] = Field(None, description="Error message if any")
     include_in_memory: Optional[bool] = Field(None, description="Whether to include this action in memory")
+    executed_by_ai: Optional[bool] = Field(False, description="Whether this action was executed by AI fallback")
+    fallback_reason: Optional[str] = Field(None, description="Reason why AI fallback was triggered")
+    fallback_attempt: Optional[int] = Field(None, description="Which retry attempt succeeded (1-based)")
 
 class HistoryItem(BaseModel):
     """

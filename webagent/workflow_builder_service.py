@@ -89,10 +89,16 @@ If no parameters are found, return: {{"parameters": []}}"""
     # Get LLM and generate extraction
     llm = get_llm(provider, model)
     messages = [HumanMessage(content=extraction_prompt)]
-    response = await llm.chat.ainvoke(messages)
+    response = await llm.ainvoke(messages)
 
     # Parse JSON from response (handle markdown code blocks)
-    extraction_text = response.content if hasattr(response, 'content') else str(response)
+    # Handle different response formats from different LLM providers
+    if hasattr(response, 'completion'):
+        extraction_text = response.completion
+    elif hasattr(response, 'content'):
+        extraction_text = response.content
+    else:
+        extraction_text = str(response)
     parameters_data = _parse_json_response(extraction_text)
 
     # Convert to ParameterDefinition objects

@@ -1,6 +1,7 @@
 """
 Workflow replay service - replays cached workflows without using AI by default.
 Extracts parameters from task prompts and replays actions.
+If actions fail, automatically falls back to AI to complete the step.
 """
 import json
 import re
@@ -8,7 +9,8 @@ from typing import Dict, Any, List
 from playwright.async_api import Page, async_playwright
 from webagent.models import ProviderEnum, HistoryItem, Action
 from webagent.llm_service import get_llm
-from langchain_core.messages import HumanMessage
+from webagent.workflow_ai_fallback_service import execute_step_with_ai_fallback
+from browser_use.llm import UserMessage
 import logging
 
 logger = logging.getLogger(__name__)
@@ -72,11 +74,18 @@ If task is "Search for laptop on Google" and template variable is "searchQuery",
 
     # Get LLM and generate extraction
     llm = get_llm(provider, model)
-    messages = [HumanMessage(content=extraction_prompt)]
-    response = await llm.chat.ainvoke(messages)
+    # Browser-use LLMs need UserMessage format
+    messages = [UserMessage(content=extraction_prompt)]
+    response = await llm.ainvoke(messages)
 
     # Parse JSON from response
-    extraction_text = response.content if hasattr(response, 'content') else str(response)
+    # Handle different response formats from different LLM providers
+    if hasattr(response, 'completion'):
+        extraction_text = response.completion
+    elif hasattr(response, 'content'):
+        extraction_text = response.content
+    else:
+        extraction_text = str(response)
 
     try:
         # Try to extract from markdown code block
@@ -132,18 +141,26 @@ def apply_parameters_to_workflow(
 async def replay_workflow(
     session_response: Dict[str, Any],
     workflow: Dict[str, Any],
-    use_ai_fallback: bool = True
+    provider: ProviderEnum,
+    model: str,
+    original_task_prompt: str
 ) -> tuple[List[HistoryItem], List[str], str]:
     """
     Replay a workflow by executing its actions without AI.
+    If any action fails, automatically falls back to AI to complete the step.
 
     Args:
         session_response: Browser session response with cdp_url
         workflow: The workflow to replay (with parameters already applied)
-        use_ai_fallback: Whether to use AI if action fails
+        provider: LLM provider to use for AI fallback
+        model: Model name to use for AI fallback
+        original_task_prompt: The original task prompt (for AI context)
 
     Returns:
         Tuple of (history, screenshots, final_result)
+
+    Raises:
+        Exception: If AI fallback fails after all retries
     """
     history: List[HistoryItem] = []
     screenshots: List[str] = []
@@ -165,18 +182,20 @@ async def replay_workflow(
         context = await browser.new_context()
         page = await context.new_page()
 
-    for step in steps:
+    for step_index, step in enumerate(steps):
         step_description = step.get("description", "")
         step_actions: List[Action] = []
+        action_failed = False
+        failed_action = None
 
-        logger.info(f"Executing step: {step_description}")
+        logger.info(f"Executing step {step_index + 1}/{len(steps)}: {step_description}")
 
         actions = step.get("actions", [])
         for action_data in actions:
             action_name = action_data.get("name", "")
             action_params = action_data.get("params", {})
 
-            logger.info(f"Executing action: {action_name} with params: {action_params}")
+            logger.info(f"Executing cached action: {action_name} with params: {action_params}")
 
             try:
                 # Execute action based on name
@@ -194,21 +213,62 @@ async def replay_workflow(
                 await page.wait_for_timeout(500)
 
             except Exception as e:
-                logger.error(f"Error executing action {action_name}: {str(e)}")
+                logger.error(f"Cached action {action_name} failed: {str(e)}")
 
                 # Record failed action
-                step_actions.append(Action(
+                failed_action = Action(
                     name=action_name,
                     params=action_params,
                     is_done=True,
                     success=False,
                     error=str(e)
+                )
+                step_actions.append(failed_action)
+                action_failed = True
+
+                # Stop executing remaining cached actions in this step
+                # AI will replace the entire step
+                logger.warning(f"Stopping cached action execution for this step, will use AI fallback")
+                break
+
+        # If any action failed, trigger AI fallback for the entire step
+        if action_failed:
+            logger.info(f"Triggering AI fallback for step: {step_description}")
+
+            # Call AI fallback with workflow context
+            ai_actions, ai_success = await execute_step_with_ai_fallback(
+                session_response=session_response,
+                step=step,
+                failed_action=failed_action,
+                workflow_context=history,  # Pass completed steps as context
+                provider=provider,
+                model=model,
+                original_task_prompt=original_task_prompt
+            )
+
+            if not ai_success:
+                # AI fallback failed after retries - stop execution
+                logger.error(f"AI fallback failed for step: {step_description}. Stopping workflow execution.")
+
+                # Take screenshot of failure state
+                screenshot_bytes = await page.screenshot(full_page=False)
+                screenshot_base64 = screenshot_bytes.hex() if screenshot_bytes else None
+                screenshots.append(screenshot_base64)
+
+                # Add failed step to history
+                history.append(HistoryItem(
+                    description=step_description,
+                    actions=step_actions  # Contains the failed cached action
                 ))
 
-                if not use_ai_fallback:
-                    raise
+                # Raise exception to stop workflow
+                raise Exception(f"AI fallback failed for step '{step_description}' after all retries")
 
-        # Take screenshot after step
+            # AI fallback succeeded - replace step actions with AI actions
+            logger.info(f"AI fallback succeeded with {len(ai_actions)} actions")
+            step_actions = ai_actions
+
+        # Take screenshot after step (whether cached or AI)
         screenshot_bytes = await page.screenshot(full_page=False)
         screenshot_base64 = screenshot_bytes.hex() if screenshot_bytes else None
         screenshots.append(screenshot_base64)
@@ -218,6 +278,8 @@ async def replay_workflow(
             description=step_description,
             actions=step_actions
         ))
+
+        logger.info(f"Step completed: {step_description} ({'AI fallback' if action_failed else 'cached'})")
 
     # Get final result (page content or URL)
     final_result = await page.evaluate("document.body.innerText") or page.url

@@ -183,11 +183,13 @@ async def execute_agent(request: AgentRequest, task_id=None, task_run_id=None):
                 parameter_values=parameter_values
             )
 
-            # Replay the workflow
+            # Replay the workflow with AI fallback enabled
             history, screenshots, final_result = await replay_workflow(
                 session_response=session_response,
                 workflow=processed_workflow,
-                use_ai_fallback=False
+                provider=request.provider,
+                model=request.model,
+                original_task_prompt=request.prompt
             )
 
             is_done = True

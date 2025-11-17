@@ -2,7 +2,7 @@ from webagent.models import ProviderEnum
 from langchain_together import Together
 from pydantic import SecretStr
 import os
-from browser_use import Agent, ChatGoogle, ChatOpenAI, ChatAnthropic, ChatGroq
+from browser_use import ChatGoogle, ChatOpenAI, ChatAnthropic, ChatGroq
 
 
 def get_llm(provider: ProviderEnum, model: str):
