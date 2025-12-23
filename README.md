@@ -16,8 +16,8 @@ curl -X POST http://localhost:3000/runs \
 
 ### Fast and reliable.
 
-🚀 Webagent can record and cache browser actions to build parameterized workflows, then replay repetitive tasks without using AI — fast and cost-effective.
-💊 Workflows are self-healing: if a website changes, the workflow falls back to AI.
+- 🚀 Webagent can record and cache browser actions to build parameterized workflows, then replay repetitive tasks without using AI — fast and cost-effective.
+- 💊 Workflows are self-healing: if a website changes, the workflow falls back to AI.
 
 ### Adaptable.
 
